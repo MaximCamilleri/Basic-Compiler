@@ -4,6 +4,16 @@
         "iosfwd": "cpp",
         "stack": "cpp",
         "*.tcc": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "string": "cpp",
+        "deque": "cpp",
+        "forward_list": "cpp",
+        "list": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "system_error": "cpp",
+        "memory": "cpp",
+        "istream": "cpp",
+        "functional": "cpp"
     }
 }

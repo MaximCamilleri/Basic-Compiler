@@ -1,18 +1,17 @@
-#include "scanner.h"
+#include "header.h"
 
 int main(){
     string filename("program.txt");
-    vector<char> bytes;
 
     FILE* input_file = fopen(filename.c_str(), "r");
     if (input_file == nullptr) {
        return EXIT_FAILURE;
     }
     
-    int c;
+    char c;
+    scanner sc;
     while ((c = fgetc(input_file)) != EOF) {
-       putchar(c);
-       cout << "-";
+       scannerLoop(sc, c);
     }
 
     cout << endl;
@@ -26,11 +25,18 @@ int main(){
 void scannerLoop(scanner sc, char nextChar){
    while(sc.getState() != -1){ // -1 will indicate an error state
       sc.appendLexeme(nextChar);
-      //if(state in Sa) stack.clear(); (what is sa?)
-      //sc.pushStack(state) (where am i getting state from)
-      //cat = CharCat(char); get the catagory form the clasification table
-      //state = TX[state, cat]; get the next state from the transion table 
-      rollbackLoop(sc);
+
+      if(sc.getTokenType(sc.getState()) != "reject") {
+         sc.cleanStack(); 
+      }
+
+      sc.pushStack(sc.getState());
+
+      string tmp_string(1, nextChar);
+      int cat = sc.getClassifier(tmp_string); //get the catagory form the clasification table
+      sc.setState(sc.getFromTransitionTable(sc.getState(), cat));
+      //rollbackLoop(sc);
+      cout << sc.getLexeme();
    }
 }
 

@@ -1,47 +1,55 @@
 #include "header.h"
 
 int main(){
-    string filename("program.txt");
 
-    FILE* input_file = fopen(filename.c_str(), "r");
-    if (input_file == nullptr) {
-       return EXIT_FAILURE;
-    }
-    
-    char c;
-    scanner sc;
-    while ((c = fgetc(input_file)) != EOF) {
-       scannerLoop(sc, c);
-    }
+   program prog("program.h");
+   scanner sc;
+   bool lexicalError = false;
 
-    cout << endl;
-    fclose(input_file);
+   while((prog.nextCharInt() < prog.getProgSize() - 1) && lexicalError == false){
+      lexicalError = scannerLoop(&sc, &prog);
+   }
 
-    
-
-    return EXIT_SUCCESS;
+   return EXIT_SUCCESS;
 }
 
-void scannerLoop(scanner sc, char nextChar){
-   while(sc.getState() != -1){ // -1 will indicate an error state
-      sc.appendLexeme(nextChar);
-
-      if(sc.getTokenType(sc.getState()) != "reject") {
-         sc.cleanStack(); 
+bool scannerLoop(scanner *sc, program *prog){
+   sc->initScanner();
+   while(sc->getState() != 30){ // 30 will indicate an error state
+      char nextChar = prog->getNextChar();
+      sc->appendLexeme(nextChar);
+      if(sc->getTokenType(sc->getState()) != errorState && sc->getTokenType(sc->getState()) != start) { // we found a final state
+         sc->cleanStack(); //delete everything from the stack, indicating that this is the most resent final state found
       }
 
-      sc.pushStack(sc.getState());
+      sc->pushStack(sc->getState());
 
-      string tmp_string(1, nextChar);
-      int cat = sc.getClassifier(tmp_string); //get the catagory form the clasification table
-      sc.setState(sc.getFromTransitionTable(sc.getState(), cat));
-      //rollbackLoop(sc);
-      cout << sc.getLexeme();
+      int cat = sc->getClassifier(nextChar); //get the category form the classification table
+      sc->setState(sc->getFromTransitionTable(sc->getState(), cat));
    }
+   return rollbackLoop(sc, prog);
 }
 
-void rollbackLoop(scanner sc){
-   while(sc.getState() != -2 ){ // -2 will indidicate an accepting state 
-      sc.setState(sc.popStack());
+bool rollbackLoop(scanner *sc, program *prog){
+   while(sc->getState() != -1 && (sc->getTokenType(sc->getState()) == errorState || sc->getTokenType(sc->getState()) == start)){ 
+      sc->setState(sc->popStack());
+      prog->decrementChar();
+      if (!sc->getLexeme().empty()) {
+         string temp = sc->getLexeme();
+         temp.pop_back();
+         sc->setLexeme(temp);
+      }
+   }
+
+   if(sc->getTokenType(sc->getState()) != errorState && sc->getState() != -1){
+      if (char(sc->getLexeme()[0]) == 10){
+         cout << "\\n " << sc->getTokenName(sc->getTokenType(sc->getState())) << endl;
+      }else{
+         cout << sc->getLexeme() << " " << sc->getTokenName(sc->getTokenType(sc->getState())) << endl;
+      }
+      return false;
+   }else{
+      cout << "Lexical error";
+      return true;
    }
 }

@@ -1,4 +1,5 @@
 #include "scanner.h"
+#include "program.h"
 
-void rollbackLoop(scanner sc);
-void scannerLoop(scanner sc, char nextChar);
+bool rollbackLoop(scanner *sc, program *prog);
+bool scannerLoop(scanner *sc, program *prog);

@@ -1,2 +1,3 @@
-test
-test
+print(hiu);
+
+for(int in = 1.2)

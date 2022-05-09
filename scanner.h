@@ -21,7 +21,9 @@ enum tokens {
     closeCurlyBracket,
     newline,
     colon,
-    comma 
+    comma,
+    // actual words
+    _fn, _float, _int, _bool, _return, _let, _print, _char, _true, _false, _if, _for, _while, _else
 };
 
 class scanner{
@@ -80,7 +82,7 @@ private:
        {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S32 colon
        {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}  // S33 comma
    };
-   tokens tokenTypeTable[32] = {
+   tokens tokenTypeTable[34] = {
     // S0      S1        S2          S3          S4          S5          S6          
        start, variable, conditions, conditions, conditions, conditions, conditions, 
     // S7          S8          S9          S10              S11        S12        S13        S14
@@ -89,13 +91,13 @@ private:
        returnFunc, singleLineComment, errorState, errorState, multiLineComment, openCircleBracket, closeCircleBracket,
     // S22               S23                S24     S25          S26       S27    S28        S29        S30
        openCurlyBracket, closeCurlyBracket, intVal, errorState, floatVal, space, errorState, stringVal, errorState,
-    // S31
-       newline
+    // S31      S32    S33
+       newline, colon, comma
    };
 
-    std::map<tokens,std::string> m;
-    
+   String reservedWords[14] =  {"fn", "float", "int", "bool", "return", "let", "print", "char", "true", "false", "if", "for", "while", "else"};
 
+   std::map<tokens,std::string> m;
    int state;
    string lexeme;
    stack<int> stck;

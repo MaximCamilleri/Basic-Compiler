@@ -33,7 +33,7 @@ void program::readProgram(string fileName){
     while ((c = fgetc(input_file)) != EOF) {
        this->prog.push_back(c);
     }
-    //this->prog.push_back('\n');
+    this->prog.push_back('\n');
 
     fclose(input_file);
 }

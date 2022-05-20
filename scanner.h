@@ -22,9 +22,11 @@ enum tokens {
     newline,
     colon,
     comma,
-    // actual words
+    // reserved words
     _fn, _float, _int, _bool, _return, _let, _print, _char, _true, _false, _if, _for, _while, _else
 };
+
+
 
 class scanner{
 private:
@@ -95,8 +97,6 @@ private:
        newline, colon, comma
    };
 
-   String reservedWords[14] =  {"fn", "float", "int", "bool", "return", "let", "print", "char", "true", "false", "if", "for", "while", "else"};
-
    std::map<tokens,std::string> m;
    int state;
    string lexeme;
@@ -125,6 +125,9 @@ public:
     int getFromTransitionTable(int state, int classifier);
     tokens getTokenType(int state);
     int getClassifier(char a);
+
+    //check state
+    tokens checkReservedWord();
 
     //debugging
     void printStack();
@@ -212,6 +215,20 @@ void scanner::initTokenMap(){
     m[newline] = "<newLine>";
     m[colon] = "<colon>";
     m[comma] = "<comma>";
+    m[_fn] = "<_fn>";
+    m[_float] = "<_float>";
+    m[_int] = "<_int>";
+    m[_bool] = "<_bool>";
+    m[_return] = "<_return>";
+    m[_let] = "<_let>";
+    m[_print] = "<_print>";
+    m[_char] = "<_char>";
+    m[_true] = "<_true>";
+    m[_false] = "<_false>";
+    m[_if] = "<_if>";
+    m[_for] = "<_for>";
+    m[_while] = "<_while>";
+    m[_else] = "<_else>";
 } 
 
 string scanner::getTokenName(tokens t){
@@ -227,5 +244,38 @@ void scanner::printStack(){
         cout << temp << " ";
     }
     cout << endl;
+}
+
+tokens scanner::checkReservedWord(){
+    if(this->lexeme == "fn"){
+        return _fn;
+    }else if(this->lexeme == "float"){
+        return _float;
+    }else if(this->lexeme == "int"){
+        return _int;
+    }else if(this->lexeme == "bool"){
+        return _bool;
+    }else if(this->lexeme == "return"){
+        return _return;
+    }else if(this->lexeme == "let"){
+        return _let;
+    }else if(this->lexeme == "print"){
+        return _print;
+    }else if(this->lexeme == "char"){
+        return _char;
+    }else if(this->lexeme == "true"){
+        return _true;
+    }else if(this->lexeme == "false"){
+        return _false;
+    }else if(this->lexeme == "if"){
+        return _if;
+    }else if(this->lexeme == "for"){
+        return _for;
+    }else if(this->lexeme == "while"){
+        return _while;
+    }else if(this->lexeme == "else"){
+        return _else;
+    }
+    return variable;
 }
 

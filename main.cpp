@@ -4,6 +4,7 @@ int main(){
 
    program prog("program.h");
    scanner sc;
+   
    bool lexicalError = false;
 
    while((prog.nextCharInt() < prog.getProgSize() - 1) && lexicalError == false){
@@ -45,7 +46,11 @@ bool rollbackLoop(scanner *sc, program *prog){
       if (char(sc->getLexeme()[0]) == 10){
          cout << "\\n " << sc->getTokenName(sc->getTokenType(sc->getState())) << endl;
       }else{
-         cout << sc->getLexeme() << " " << sc->getTokenName(sc->getTokenType(sc->getState())) << endl;
+         tokens tType = sc->getTokenType(sc->getState());
+         if(tType == variable){
+            tType = sc->checkReservedWord();
+         }
+         cout << sc->getLexeme() << " " << sc->getTokenName(tType) << endl;
       }
       return false;
    }else{

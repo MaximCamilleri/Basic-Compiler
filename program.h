@@ -22,7 +22,7 @@ program::program(string fileName){
 }
 
 void program::readProgram(string fileName){
-    string filename("program.txt");
+    string filename(fileName);
 
     FILE* input_file = fopen(filename.c_str(), "r");
     if (input_file == nullptr) {

@@ -1,11 +1,11 @@
 #include "lib_std_facilities.h"
 #include <stack>
+#include "program.h"
 
 enum tokens {
     start,
     errorState,
     variable, 
-    operators,
     singleLineComment,
     multiLineComment,
     intVal,
@@ -22,8 +22,12 @@ enum tokens {
     newline,
     colon,
     comma,
+    charVal,
+    equals,
     // reserved words
-    _fn, _float, _int, _bool, _return, _let, _print, _char, _true, _false, _if, _for, _while, _else
+    _fn, _float, _int, _bool, _return, _let, _print, _char, _true, _false, _if, _for, _while, _else, _and, _not, _or,
+    // Operators
+    _minus, _plus, _multiply, _divide
 };
 
 
@@ -43,58 +47,61 @@ private:
     // <digit>
        {48, 49, 50, 51, 
        52, 53, 54, 56, 57},         
-    // !     =     +     -     *     /     <     >     ;     {      }      (     )     .     <space> "     <newLine> :     ,
-       {33}, {61}, {43}, {45}, {42}, {47}, {60}, {62}, {59}, {123}, {125}, {40}, {41}, {46}, {32},   {34}, {10},     {58}, {44}
+    // !     =     +     -     *     /     <     >     ;     {      }      (     )     .     <space> "     <newLine> :     ,     '
+       {33}, {61}, {43}, {45}, {42}, {47}, {60}, {62}, {59}, {123}, {125}, {40}, {41}, {46}, {32},   {34}, {10},     {58}, {44}, {46}
    };
 
-   int transitionTable[34][22] = {
-    // <letter> <digit> !   =   +   -   *   /   <   >   ;   {   }   (   )   .   <space> "  \n   :   ,  other
-       {1,      24,     8,  4,  11, 12, 13, 14, 6,  2,  10, 22, 23, 20, 21, 30, 27,     28, 31, 32, 33, 30}, // S0  start
-       {1,      1,      30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S1  variable
-       {30,     30,     30, 3,  30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S2  >
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S3  >=
-       {30,     30,     30, 5,  30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S4  =
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S5  ==
-       {30,     30,     30, 7,  30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S6  <
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S7  <=
-       {30,     30,     30, 9,  30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S8  error
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S9  !=
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S10 ;
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S11 +
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 15, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S12 - 
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S13 *
-       {30,     30,     30, 30, 30, 30, 17, 16, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S14 /
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S15 ->
-       {16,     16,     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,     16, 30, 16, 16, 16}, // S16 //
-       {17,     17,     17, 17, 17, 17, 18, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,     17, 17, 17, 17, 17}, // S17 error
-       {17,     17,     17, 17, 17, 17, 18, 19, 17, 17, 17, 17, 17, 17, 17, 17, 17,     17, 17, 17, 17, 17}, // S18 error
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S19 /* ... */
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S20 (
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S21 )
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S22 {
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S23 }
-       {30,     24,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 25, 30,     30, 30, 30, 30, 30}, // S24 int
-       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S25 error
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S26 float
-       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 27,     30, 30, 30, 30, 30}, // S27 space
-       {28,     28,     28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28,     29, 30, 30, 30, 30}, // S28 error
-       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S29 string
-       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30},  // S30 Final Error State
-       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S31 NewLine
-       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}, // S32 colon
-       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30}  // S33 comma
+   int transitionTable[37][23] = {
+    // <letter> <digit> !   =   +   -   *   /   <   >   ;   {   }   (   )   .   <space> "  \n   :   ,   '   other
+       {1,      24,     8,  4,  11, 12, 13, 14, 6,  2,  10, 22, 23, 20, 21, 30, 27,     28, 31, 32, 33, 34, 30}, // S0  start
+       {1,      1,      30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S1  variable
+       {30,     30,     30, 3,  30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S2  >
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S3  >=
+       {30,     30,     30, 5,  30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S4  =
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S5  ==
+       {30,     30,     30, 7,  30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S6  <
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S7  <=
+       {30,     30,     30, 9,  30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S8  error
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S9  !=
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S10 ;
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S11 +
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 15, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S12 - 
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S13 *
+       {30,     30,     30, 30, 30, 30, 17, 16, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S14 /
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S15 ->
+       {16,     16,     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,     16, 30, 16, 16, 16, 16}, // S16 //
+       {17,     17,     17, 17, 17, 17, 18, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,     17, 17, 17, 17, 17, 17}, // S17 error
+       {17,     17,     17, 17, 17, 17, 18, 19, 17, 17, 17, 17, 17, 17, 17, 17, 17,     17, 17, 17, 17, 17, 17}, // S18 error
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S19 /* ... */
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S20 (
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S21 )
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S22 {
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S23 }
+       {30,     24,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 25, 30,     30, 30, 30, 30, 30, 30}, // S24 int
+       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S25 error
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S26 float
+       {30,     30,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 27,     30, 30, 30, 30, 30, 30}, // S27 space
+       {28,     28,     28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28,     29, 30, 30, 30, 30, 30}, // S28 error
+       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S29 string
+       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S30 Final Error State
+       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S31 NewLine
+       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S32 colon
+       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}, // S33 comma
+       {35,     35,     35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35,     35, 30, 35, 35, 35, 35}, // S34 error
+       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 36, 30}, // S35 error
+       {30,     26,     30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,     30, 30, 30, 30, 30, 30}  // S36 charVal
    };
-   tokens tokenTypeTable[34] = {
+   tokens tokenTypeTable[37] = {
     // S0      S1        S2          S3          S4          S5          S6          
-       start, variable, conditions, conditions, conditions, conditions, conditions, 
+       start, variable, conditions, conditions, equals, conditions, conditions, 
     // S7          S8          S9          S10              S11        S12        S13        S14
-       conditions, errorState, conditions, endOfExpression, operators, operators, operators, operators, 
+       conditions, errorState, conditions, endOfExpression, _plus, _minus, _multiply, _divide, 
     // S15         S16                S17         S18         S19               S20                S21
        returnFunc, singleLineComment, errorState, errorState, multiLineComment, openCircleBracket, closeCircleBracket,
     // S22               S23                S24     S25          S26       S27    S28        S29        S30
        openCurlyBracket, closeCurlyBracket, intVal, errorState, floatVal, space, errorState, stringVal, errorState,
-    // S31      S32    S33
-       newline, colon, comma
+    // S31      S32    S33    S34         S35         S36
+       newline, colon, comma, errorState, errorState, charVal
    };
 
    std::map<tokens,std::string> m;
@@ -128,6 +135,9 @@ public:
 
     //check state
     tokens checkReservedWord();
+
+    //tokenization
+    void getNextToken(string pName);
 
     //debugging
     void printStack();
@@ -200,7 +210,6 @@ void scanner::initTokenMap(){
     m[conditions] = "<conditions>";
     m[errorState] = "<errorState>";
     m[endOfExpression] = "<endOfExpression>";
-    m[operators] = "<operators>";
     m[returnFunc] = "<returnFunc>";
     m[singleLineComment] = "<singleLineComment>";
     m[multiLineComment] = "<multiLineComment>";
@@ -229,6 +238,15 @@ void scanner::initTokenMap(){
     m[_for] = "<_for>";
     m[_while] = "<_while>";
     m[_else] = "<_else>";
+    m[_and] = "<_and>";
+    m[_not] = "<_not>";
+    m[_or] = "<_or>";
+    m[_plus] = "<_plus>";
+    m[_minus] = "<_minus>";
+    m[_multiply] = "<_multiple>";
+    m[_divide] = "<_divide>";
+    m[charVal] = "<charVal>";
+    m[equals] = "<equals>";
 } 
 
 string scanner::getTokenName(tokens t){
@@ -277,5 +295,63 @@ tokens scanner::checkReservedWord(){
         return _else;
     }
     return variable;
+
+
+}
+
+void scanner::getNextToken(string pName){
+    program prog(pName);
+}
+
+bool rollbackLoop(scanner *sc, program *prog, string &token);
+bool scannerLoop(scanner *sc, program *prog, string &token);
+
+bool scannerLoop(scanner *sc, program *prog, string &token){
+   sc->initScanner();
+   while(sc->getState() != 30){ // 30 will indicate an error state
+      char nextChar = prog->getNextChar();
+      sc->appendLexeme(nextChar);
+      if(sc->getTokenType(sc->getState()) != errorState && sc->getTokenType(sc->getState()) != start) { // we found a final state
+         sc->cleanStack(); //delete everything from the stack, indicating that this is the most resent final state found
+      }
+
+      sc->pushStack(sc->getState());
+
+      int cat = sc->getClassifier(nextChar); //get the category form the classification table
+      sc->setState(sc->getFromTransitionTable(sc->getState(), cat));
+   }
+   return rollbackLoop(sc, prog, token);
+}
+
+bool rollbackLoop(scanner *sc, program *prog, string &token){
+   while(sc->getState() != -1 && (sc->getTokenType(sc->getState()) == errorState || sc->getTokenType(sc->getState()) == start)){ 
+      sc->setState(sc->popStack());
+      prog->decrementChar();
+      if (!sc->getLexeme().empty()) {
+         string temp = sc->getLexeme();
+         temp.pop_back();
+         sc->setLexeme(temp);
+      }
+   }
+
+   if(sc->getTokenType(sc->getState()) != errorState && sc->getState() != -1){
+      if (char(sc->getLexeme()[0]) == 10){
+          string temp = "\\n " + sc->getTokenName(sc->getTokenType(sc->getState()));
+          //cout << temp << endl;
+          token = temp;
+      }else{
+         tokens tType = sc->getTokenType(sc->getState());
+         if(tType == variable){
+            tType = sc->checkReservedWord();
+         }
+         string temp = sc->getLexeme() + " " + sc->getTokenName(tType);
+         //cout << temp << endl;
+         token = temp;
+      }
+      return false;
+   }else{
+      cout << "Lexical error";
+      return true;
+   }
 }
 

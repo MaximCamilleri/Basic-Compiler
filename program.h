@@ -39,9 +39,13 @@ void program::readProgram(string fileName){
 }
 
 char program::getNextChar(){
-    char tempChar = this->prog[nextChar];
-    this->nextChar += 1;
-    return tempChar;
+    try{
+        char tempChar = this->prog[nextChar];
+        this->nextChar += 1;
+        return tempChar;
+    } catch(const std::out_of_range& oor){
+        return EOF;
+    }
 }
 
 void program::decrementChar(){

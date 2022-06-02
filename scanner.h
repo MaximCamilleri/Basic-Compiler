@@ -27,8 +27,40 @@ enum tokens {
     // reserved words
     _fn, _float, _int, _bool, _return, _let, _print, _char, _true, _false, _if, _for, _while, _else, _and, _not, _or,
     // Operators
-    _minus, _plus, _multiply, _divide
+    _minus, _plus, _multiply, _divide,
+
+    endOfFile
 };
+
+class token{
+private:
+    string lexeme;
+    tokens tokenType;
+public:
+    token(string lexeme , tokens tokenType);
+    token();
+
+    tokens getTokenType();
+    string getLexeme();
+};
+
+token::token(string lexeme, tokens tokenType){
+    this->lexeme = lexeme;
+    this->tokenType = tokenType;
+}
+
+token::token(){
+    this->lexeme = "";
+    this->tokenType = errorState;
+}
+
+tokens token::getTokenType(){
+    return this->tokenType;
+}
+
+string token::getLexeme(){
+    return this->lexeme;
+}
 
 
 
@@ -303,14 +335,17 @@ void scanner::getNextToken(string pName){
     program prog(pName);
 }
 
-bool rollbackLoop(scanner *sc, program *prog, string &token);
-bool scannerLoop(scanner *sc, program *prog, string &token);
+token *rollbackLoop(scanner *sc, program *prog, bool *error);
+token *scannerLoop(scanner *sc, program *prog, bool *error);
 
-bool scannerLoop(scanner *sc, program *prog, string &token){
+token *scannerLoop(scanner *sc, program *prog, bool *error){
    sc->initScanner();
    while(sc->getState() != 30){ // 30 will indicate an error state
       char nextChar = prog->getNextChar();
       sc->appendLexeme(nextChar);
+      if(nextChar == EOF){
+          return new token("EOF", endOfFile);
+      }
       if(sc->getTokenType(sc->getState()) != errorState && sc->getTokenType(sc->getState()) != start) { // we found a final state
          sc->cleanStack(); //delete everything from the stack, indicating that this is the most resent final state found
       }
@@ -320,10 +355,12 @@ bool scannerLoop(scanner *sc, program *prog, string &token){
       int cat = sc->getClassifier(nextChar); //get the category form the classification table
       sc->setState(sc->getFromTransitionTable(sc->getState(), cat));
    }
-   return rollbackLoop(sc, prog, token);
+
+   return rollbackLoop(sc, prog, error);
 }
 
-bool rollbackLoop(scanner *sc, program *prog, string &token){
+token *rollbackLoop(scanner *sc, program *prog, bool *error){
+    token *t;
    while(sc->getState() != -1 && (sc->getTokenType(sc->getState()) == errorState || sc->getTokenType(sc->getState()) == start)){ 
       sc->setState(sc->popStack());
       prog->decrementChar();
@@ -336,22 +373,19 @@ bool rollbackLoop(scanner *sc, program *prog, string &token){
 
    if(sc->getTokenType(sc->getState()) != errorState && sc->getState() != -1){
       if (char(sc->getLexeme()[0]) == 10){
-          string temp = "\\n " + sc->getTokenName(sc->getTokenType(sc->getState()));
-          //cout << temp << endl;
-          token = temp;
+          t = new token("\\n", sc->getTokenType(sc->getState()));
       }else{
          tokens tType = sc->getTokenType(sc->getState());
          if(tType == variable){
             tType = sc->checkReservedWord();
          }
-         string temp = sc->getLexeme() + " " + sc->getTokenName(tType);
-         //cout << temp << endl;
-         token = temp;
+         t = new token(sc->getLexeme(), sc->getTokenType(sc->getState()));
       }
-      return false;
+
+      *error = false;
    }else{
-      cout << "Lexical error";
-      return true;
+       *error = true;
    }
+   return t;
 }
 

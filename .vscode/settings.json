@@ -19,6 +19,8 @@
         "array": "cpp",
         "string_view": "cpp",
         "regex": "cpp",
-        "bitset": "cpp"
+        "bitset": "cpp",
+        "new": "cpp",
+        "stdexcept": "cpp"
     }
 }

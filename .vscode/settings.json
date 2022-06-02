@@ -21,6 +21,9 @@
         "regex": "cpp",
         "bitset": "cpp",
         "new": "cpp",
-        "stdexcept": "cpp"
+        "stdexcept": "cpp",
+        "compare": "cpp",
+        "streambuf": "cpp",
+        "typeinfo": "cpp"
     }
 }

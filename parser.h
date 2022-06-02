@@ -3,56 +3,61 @@
 
 class parser{
 private:
-    scanner *lexer;
+    scanner lexer;
     program *p;
     token *nextToken;
 public:
-    parser(scanner lexer, program p);
+    parser(scanner lexer, string name);
     void parse();
     void getNextToken();
 
     //parsing algorithms
     ASTstatement * parseStatement();
-    void parseBlock();
-    void parseFunctionDecl();
-    void parseFormalParams();
-    void parseFormalParam();
-    void parseWhileStatement();
-    void parseForStatement();
+    ASTstatement * parseBlock();
+    ASTstatement * parseFunctionDecl();
+    ASTstatement * parseFormalParams();
+    ASTstatement * parseFormalParam();
+    ASTstatement * parseWhileStatement();
+    ASTstatement * parseForStatement();
     ASTstatement * parseIfStatement();
-    void parseRtrnStatement();
+    ASTstatement * parseRtrnStatement();
     ASTstatement * parsePrintStatement();
-    void parseVariableDecl();
+    ASTstatement * parseVariableDecl();
     ASTstatement * parseAssignment();
-    ASTstatement * parseExpression();
-    void parseSimpleExpr();
-    void parseTerm();
-    void parseFactor();
-    void parseUnary();
-    void parseSubExpression();
-    void parseFunctionCall();
-    void parseActualParams();
-    void parseRelationalOp();
-    void parseAdditiveOp();
-    void parseMultiplicativeOp();
-    void parseLiteral();
-    void parseBooleanLiteral();
+    ASTexpression * parseExpression();
+    ASTexpression * parseSimpleExpr();
+    ASTexpression * parseTerm();
+    ASTexpression * parseFactor();
+    ASTexpression * parseUnary();
+    ASTexpression * parseSubExpression();
+    ASTstatement * parseFunctionCall();
+    ASTstatement * parseActualParams();
+    ASTstatement * parseRelationalOp();
+    ASTstatement * parseAdditiveOp();
+    ASTstatement * parseMultiplicativeOp();
+    ASTexpression * parseLiteral();
+    ASTstatement * parseBooleanLiteral();
 };
 
-parser::parser(scanner lexer, program p){
-    this->lexer = &lexer;
-    this->p = &p;
+parser::parser(scanner lexer, string name){
+    this->lexer = lexer;
+    this->p = new program(name);
 
 }
 
 void parser::getNextToken(){
     bool lexicalError;
-    this->nextToken = scannerLoop(this->lexer, this->p, &lexicalError);
+    this->nextToken = scannerLoop(&(this->lexer), this->p, &lexicalError);
     if(lexicalError == true){
         cout << "Program encountered a lexical error";
         exit(0);
     }else{
-        cout << "Lexeme: " << this->nextToken->getLexeme() << " Token Type: " << this->nextToken->getTokenType() << endl;
+        if(this->nextToken->getTokenType() == space){
+            getNextToken();
+        }else{
+            cout << "Lexeme: " << this->nextToken->getLexeme() << " Token Type: " << this->nextToken->getTokenType() << endl;
+        }
+        
     }
 
 }
@@ -67,6 +72,13 @@ ASTstatement * parser::parseStatement(){
 
     case variable:
         parseAssignment();
+        getNextToken();
+        if(this->nextToken->getTokenType() != endOfExpression){
+            cout << "Expected Semicolon" << endl;
+            exit(0);
+        }
+        getNextToken();
+
         break;
 
     case _print:
@@ -78,23 +90,23 @@ ASTstatement * parser::parseStatement(){
         break;
 
     case _for:
-        parseForStatement();
+        //parseForStatement();
         break;
 
     case _while:
-        parseWhileStatement();
+        //parseWhileStatement();
         break;
 
     case _return:
-        parseRtrnStatement();
+        //parseRtrnStatement();
         break;
 
     case _fn:
-        parseFunctionDecl();
+        //parseFunctionDecl();
         break;
 
     case openCurlyBracket:
-        parseBlock();
+        //parseBlock();
         break;
 
     default:
@@ -105,15 +117,17 @@ ASTstatement * parser::parseStatement(){
 }
 
 ASTstatement * parser::parsePrintStatement(){
-    auto node = new ASTprintStatement();
     getNextToken();
+    auto RHS = new ASTexpression();
+    auto node = new ASTprintStatement(RHS);
+    
     return node;
 
 }
 
-void parser::parseRtrnStatement(){
+// ASTstatement * parser::parseRtrnStatement(){
     
-}
+// }
 
 ASTstatement * parser::parseIfStatement(){
     auto node = new ASTifStatement();
@@ -121,38 +135,151 @@ ASTstatement * parser::parseIfStatement(){
     return node;
 }
 
-void parser::parseForStatement(){
+// ASTstatement * parser::parseForStatement(){
     
-}
+// }
 
-void parser::parseWhileStatement(){
+// ASTstatement * parser::parseWhileStatement(){
     
-}
+// }
 
-void parser::parseBlock(){
+// ASTstatement * parser::parseBlock(){
 
-}
+// }
 
-void parser::parseVariableDecl(){
+// ASTstatement * parser::parseVariableDecl(){
 
-}
+// }
 
 ASTstatement * parser::parseAssignment(){
     string var_name = this->nextToken->getLexeme();
     getNextToken();
     if(this->nextToken->getTokenType() != equals){
         cout << "Expected '='" << endl;
+        exit(0);
         return nullptr;
     }
     getNextToken();
     auto expr_node = parseExpression();
-    auto ass_node = new ASTassignment();
+    auto ass_node = new ASTassignment(var_name, expr_node);
+
+    return ass_node;
 
 }
 
+ASTexpression * parser::parseExpression(){
+    auto LHS = parseSimpleExpr();
+    if(!LHS){
+        return nullptr;
+    }
+    return LHS;
+    
+}
+
+ASTexpression * parser::parseSimpleExpr(){
+    auto LHS = parseTerm();
+    if(!LHS){
+        return nullptr;
+    }
+    return LHS;
+}
+
+ASTexpression * parser::parseTerm(){
+    auto LHS = parseFactor();
+    if(!LHS){
+        return nullptr;
+    }
+    return LHS;
+}
+
+ASTexpression * parser::parseFactor(){
+    ASTexpression * node = nullptr;
+    string ident;
+
+    switch(this->nextToken->getTokenType()){
+    case variable:
+        ident = this->nextToken->getLexeme(); 
+        node = new ASTidentifier(ident);
+        break;
+    case openCircleBracket:
+        node = parseSubExpression();
+        break;
+    case _minus:
+        node = parseUnary();
+        break;
+    case _not:
+        node = parseUnary();
+        break;
+    case intVal:
+        node = parseLiteral();
+        break;
+    case floatVal:
+        node = parseLiteral();
+        break;
+    case charVal:
+        node = parseLiteral();
+        break;
+    case _true:
+        node = parseLiteral();
+        break;
+    case _false:
+        node = parseLiteral();
+        break;
+    default:
+        cout << "Expected Factor" << endl;
+        exit(0);
+        break;
+    }
+    return node;
+}
+
+ASTexpression * parser::parseLiteral(){
+    ASTexpression * node = nullptr;
+    string val = this->nextToken->getLexeme();
+
+    switch(this->nextToken->getTokenType()){
+        case intVal:
+            node = new ASTintLiteral(val);
+            break;
+        case floatVal:
+            node = new ASTfloatLiteral(val);
+            break;
+        case charVal:
+            node = new ASTcharLiteral(val);
+            break;
+        case _true:
+            node = new ASTbooleanLiteral(val);
+            break;
+        case _false:
+            node = new ASTbooleanLiteral(val);
+            break;
+        default:
+            cout << "Expected Literal" << endl;
+            exit(0);
+            break;
+    }
+    return node;
+}
+
+ASTexpression * parser::parseUnary(){
+    string LHS = this->nextToken->getLexeme();
+    getNextToken();
+    auto RHS = parseExpression();
+
+    return new ASTunary(LHS, RHS);
+
+}
+
+ASTexpression * parser::parseSubExpression(){
+    getNextToken();
+    auto exp = parseExpression();
+    return new ASTsubExpression(exp);
+}
+
+
 void parser::parse(){
     cout << "starting Parser" << endl;
-    vector<ASTstatement *> * statments = new vector<ASTstatement *>();
+    vector<ASTstatement *> * statements = new vector<ASTstatement *>();
     getNextToken();
 
     while(this->nextToken->getTokenType() != endOfFile){
@@ -166,7 +293,7 @@ void parser::parse(){
                 getNextToken();
             }else{
                 if(this->nextToken->getTokenType() ==  endOfExpression){
-                    statments->push_back(stmt);
+                    statements->push_back(stmt);
                     getNextToken();
                 }
             }

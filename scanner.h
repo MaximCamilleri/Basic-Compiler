@@ -326,9 +326,8 @@ tokens scanner::checkReservedWord(){
     }else if(this->lexeme == "else"){
         return _else;
     }
+    
     return variable;
-
-
 }
 
 void scanner::getNextToken(string pName){
@@ -379,7 +378,7 @@ token *rollbackLoop(scanner *sc, program *prog, bool *error){
          if(tType == variable){
             tType = sc->checkReservedWord();
          }
-         t = new token(sc->getLexeme(), sc->getTokenType(sc->getState()));
+         t = new token(sc->getLexeme(), tType);
       }
 
       *error = false;

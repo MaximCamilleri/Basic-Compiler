@@ -15,8 +15,7 @@ int main(){
    parser Pr(sc, "testProgram.txt");
    Pr.parse();
 
-
    return EXIT_SUCCESS;
 }
 
-
+ 

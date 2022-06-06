@@ -24,7 +24,7 @@ fn AverageOfThree(x:float, y:float, x:float) -> float {
 * the return statement.
 */
 fn AverageOfThree_2(x:float, y:float, x:float) -> float {
-    return total (x + y + z) 3;
+    return (x + y + z) /3;
 }
 
 
@@ -38,4 +38,4 @@ print y;                              //6.25
 print x * z;                          //13.824
 print XGraterY(x, 2.3);               //true
 print XGreaterY_2(Sq(1.5), y);        //false
-print AverageOfThree(x, y, 1.2)       //3.28
+print AverageOfThree(x, y, 1.2);      //3.28

@@ -1,5 +1,14 @@
 #include <iostream>
+#include <vector>
 
+using namespace std;
+
+class ASTsimpleExpr;
+class ASTrelationalOp;
+class ASTterm;
+class ASTadditiveOp;
+class ASTmultiplicativeOp;
+class ASTfactor;
 
 // Node
 class ASTnode{
@@ -37,6 +46,10 @@ class ASTexpression : public ASTnode{
 public:
     ASTexpression();
     virtual ~ASTexpression();
+
+    ASTsimpleExpr * simpleExpr;
+    vector<ASTrelationalOp> * ro;
+    vector<ASTsimpleExpr> * sompleExprs;
 };
 
 ASTexpression::ASTexpression(){
@@ -161,14 +174,16 @@ ASTformalParam::~ASTformalParam(){
 // Formal Parameters
 class ASTformalParams{
 public:
-    ASTformalParams(ASTformalParam * p);
+    ASTformalParams(ASTformalParam * p, vector<ASTformalParam *> * formalParam);
     virtual ~ASTformalParams();
 
     ASTformalParam * p;
+    vector<ASTformalParam *> * formalParam;
 };
 
-ASTformalParams::ASTformalParams(ASTformalParam * p){
+ASTformalParams::ASTformalParams(ASTformalParam * p, vector<ASTformalParam *> * formalParam){
     this->p = p;
+    this->formalParam = formalParam;
 }
 
 ASTformalParams::~ASTformalParams(){
@@ -228,6 +243,7 @@ ASTwhileStatement::~ASTwhileStatement(){
 class ASTforStatement : public ASTstatement{
 public:
     ASTforStatement(ASTvariableDecl *vDecl, ASTexpression *exp, ASTassignment *ass, ASTblock *b); 
+    ASTforStatement(ASTexpression *exp, ASTassignment *ass, ASTblock *b); 
     virtual ~ASTforStatement();
 
     ASTvariableDecl *vDecl;
@@ -238,6 +254,12 @@ public:
 
 ASTforStatement::ASTforStatement(ASTvariableDecl *vDecl, ASTexpression *exp, ASTassignment *ass, ASTblock *b){
     this->vDecl = vDecl;
+    this->exp = exp;
+    this->ass = ass;
+    this->b = b;
+}
+
+ASTforStatement::ASTforStatement(ASTexpression *exp, ASTassignment *ass, ASTblock *b){
     this->exp = exp;
     this->ass = ass;
     this->b = b;
@@ -315,6 +337,10 @@ class ASTsimpleExpr : public ASTexpression{
 public:
     ASTsimpleExpr();
     virtual ~ASTsimpleExpr();
+
+    ASTterm * term;
+    vector<ASTadditiveOp> * additiveOp;
+    vector<ASTterm> * terms;
 };
 
 ASTsimpleExpr::ASTsimpleExpr(){
@@ -325,13 +351,15 @@ ASTsimpleExpr::~ASTsimpleExpr(){
     
 }
 
-// Simple Expresion 
+// Term
 class ASTterm : public ASTsimpleExpr{
 public:
     ASTterm();
     virtual ~ASTterm();
 
-
+    ASTfactor * factor;
+    vector<ASTmultiplicativeOp> * multiOp;
+    vector<ASTfactor> * factors;
 };
 
 ASTterm::ASTterm(){
@@ -341,8 +369,6 @@ ASTterm::ASTterm(){
 ASTterm::~ASTterm(){
     
 }
-
-
 
 // Factor
 class ASTfactor : public ASTterm{
@@ -395,33 +421,46 @@ ASTsubExpression::~ASTsubExpression(){
     
 }
 
-// Function Call
-class ASTfunctionCall{
-public:
-    ASTfunctionCall();
-    virtual ~ASTfunctionCall();
-};
-
-ASTfunctionCall::ASTfunctionCall(){
-    
-}
-
-ASTfunctionCall::~ASTfunctionCall(){
-    
-}
-
 // Actual Paramater
-class ASTactualParams{
+class ASTactualParams : public ASTexpression{
 public:
-    ASTactualParams();
+    ASTactualParams(ASTexpression * exp, vector<ASTexpression *> * exps);
     virtual ~ASTactualParams();
+
+    ASTexpression * exp;
+    vector<ASTexpression *> * exps;
 };
 
-ASTactualParams::ASTactualParams(){
-    
+ASTactualParams::ASTactualParams(ASTexpression * exp, vector<ASTexpression *> * exps){
+    this->exp = exp;
+    this->exps = exps;
 }
 
 ASTactualParams::~ASTactualParams(){
+    
+}
+
+// Function Call
+class ASTfunctionCall : public ASTexpression{
+public:
+    ASTfunctionCall(ASTidentifier * ident, ASTactualParams * a);
+    ASTfunctionCall(ASTidentifier * ident);
+    virtual ~ASTfunctionCall();
+
+    ASTidentifier * ident;
+    ASTactualParams * a;
+};
+
+ASTfunctionCall::ASTfunctionCall(ASTidentifier * ident, ASTactualParams * a){
+    this->ident = ident;
+    this->a = a;
+}
+
+ASTfunctionCall::ASTfunctionCall(ASTidentifier * ident){
+    this->ident = ident;
+}
+
+ASTfunctionCall::~ASTfunctionCall(){
     
 }
 
@@ -431,7 +470,7 @@ public:
     ASTrelationalOp(string val);
     virtual ~ASTrelationalOp();
 
-    string val = 0;
+    string val;
 };
 
 ASTrelationalOp::ASTrelationalOp(string val){

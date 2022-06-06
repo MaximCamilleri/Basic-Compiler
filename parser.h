@@ -1,15 +1,19 @@
 #include "scanner.h"
-#include "ASTclasses.h"
+#include "XML.h"
+
+using namespace std;
 
 class parser{
 private:
     scanner lexer;
     program *p;
     token *nextToken;
+    token *nextNextToken;
 public:
     parser(scanner lexer, string name);
     void parse();
     void getNextToken();
+    void getNextNextToken();
 
     //parsing algorithms
     ASTstatement * parseStatement();
@@ -30,8 +34,8 @@ public:
     ASTexpression * parseFactor();
     ASTexpression * parseUnary();
     ASTexpression * parseSubExpression();
-    ASTstatement * parseFunctionCall();
-    ASTstatement * parseActualParams();
+    ASTexpression * parseFunctionCall();
+    ASTactualParams * parseActualParams();
     ASTexpression * parseRelationalOp();
     ASTexpression * parseAdditiveOp();
     ASTexpression * parseMultiplicativeOp();
@@ -44,22 +48,28 @@ public:
 parser::parser(scanner lexer, string name){
     this->lexer = lexer;
     this->p = new program(name);
-
+    getNextNextToken();
 }
 
 void parser::getNextToken(){
+    this->nextToken = this->nextNextToken;
+    getNextNextToken();
+    cout << "Lexeme: " << this->nextToken->getLexeme() << " Token Type: " << this->nextToken->getTokenType() << endl;
+}
+
+void parser::getNextNextToken(){
     bool lexicalError;
-    this->nextToken = scannerLoop(&(this->lexer), this->p, &lexicalError);
+    this->nextNextToken = scannerLoop(&(this->lexer), this->p, &lexicalError);
     if(lexicalError == true){
         cout << "Program encountered a lexical error";
         exit(0);
     }else{
-        if(this->nextToken->getTokenType() == space){
-            getNextToken();
-        }else{
-            cout << "Lexeme: " << this->nextToken->getLexeme() << " Token Type: " << this->nextToken->getTokenType() << endl;
+        if(this->nextNextToken->getTokenType() == space ||
+           this->nextNextToken->getTokenType() == multiLineComment ||
+           this->nextNextToken->getTokenType() == singleLineComment ||
+           this->nextNextToken->getTokenType() == newline){
+            getNextNextToken();
         }
-        
     }
 
 }
@@ -87,7 +97,6 @@ ASTstatement * parser::parseStatement(){
 
     case _print:
         node = parsePrintStatement();
-        getNextToken();
         if(this->nextToken->getTokenType() != endOfExpression){
             cout << "Expected Semicolon" << endl;
             exit(0);
@@ -123,7 +132,6 @@ ASTstatement * parser::parseStatement(){
 
     case _return:
         node = parseRtrnStatement();
-        getNextToken();
         if(this->nextToken->getTokenType() != endOfExpression){
             cout << "Expected Semicolon" << endl;
             exit(0);
@@ -180,13 +188,11 @@ ASTstatement * parser::parseIfStatement(){
     getNextToken();
     auto block = parseBlock();
     
-    getNextToken();
     if(this->nextToken->getTokenType() == _else){
         ASTblock * elseBlock;
         while(this->nextToken->getTokenType() == _else){
             getNextToken();
             elseBlock = parseBlock();
-            getNextToken();
         }
         return new ASTifStatement(exp, block, elseBlock);
     }else{
@@ -195,37 +201,57 @@ ASTstatement * parser::parseIfStatement(){
 }
 
 ASTstatement * parser::parseForStatement(){
-    
+    bool flag = false;
     auto vDecl = parseVariableDecl();
-    if(vDecl = nullptr){
-        cout << "Expected Variable Declaration";
+    ASTforStatement * node = nullptr;
+    if(vDecl != nullptr){
+        flag = true;
+    }
+
+    if(this->nextToken->getTokenType() != endOfExpression){
+        cout << "Expected ';'";
         exit(0);
     }
 
     getNextToken();
     auto exp = parseExpression();
-    if(vDecl = nullptr){
+    if(exp == nullptr){
         cout << "Expected Expression";
+        exit(0);
+    }
+
+    if(this->nextToken->getTokenType() != endOfExpression){
+        cout << "Expected ';'";
         exit(0);
     }
 
     getNextToken();
     auto ass = parseAssignment();
-    if(vDecl = nullptr){
+    if(ass == nullptr){
         cout << "Expected Assignment";
+        exit(0);
+    }
+
+    if(this->nextToken->getTokenType() != closeCircleBracket){
+        cout << "Expected ')'";
         exit(0);
     }
 
     getNextToken();
     auto block = parseBlock();
-    if(vDecl = nullptr){
+    if(block = nullptr){
         cout << "Expected Block";
         exit(0);
     }
 
-    auto forS = new ASTforStatement(vDecl, exp, ass, block);
+    if(flag){
+        node = new ASTforStatement(vDecl, exp, ass, block);
+    }else{
+        node = new ASTforStatement(exp, ass, block);
+    }
+    
 
-    return forS;
+    return node;
 }
 
 ASTstatement * parser::parseWhileStatement(){
@@ -252,49 +278,60 @@ ASTblock * parser::parseBlock(){
     ASTblock * block = new ASTblock(stmt);
 
     getNextToken();
-    while(stmt != nullptr){
-        auto stmt = parseStatement();
+    if(this->nextToken->getTokenType() == closeCurlyBracket){
+        getNextToken();
+        return block;
+    }else{
+        while(this->nextToken->getTokenType() != closeCurlyBracket){
+            auto stmt = parseStatement();
+            if(this->nextToken->getTokenType() == endOfExpression){
+                getNextToken();
+            }
+        }
         getNextToken();
     }
-
     return block;
 }
 
 ASTvariableDecl * parser::parseVariableDecl(){
     getNextToken();
-    ASTidentifier * ident = parseIdent();
-    if(ident == nullptr){
-        cout << "Expected Identifier" << endl;
-        exit(0);
-    }
+    ASTvariableDecl * node = nullptr;
+    if(this->nextToken->getTokenType() == variable){
+        ASTidentifier * ident = parseIdent();
+        if(ident == nullptr){
+            cout << "Expected Identifier" << endl;
+            std::exit(0);
+        }
 
-    getNextToken();
-    if(this->nextToken->getTokenType() != colon){
-        cout << "Expected ':'" << endl;
-        exit(0);
-    }
+        getNextToken();
+        if(this->nextToken->getTokenType() != colon){
+            cout << "Expected ':'" << endl;
+            std::exit(0);
+        }
 
-    getNextToken();
-    auto type = parseType();
-    if(type == nullptr){
-        cout << "Expected Type" << endl;
-        exit(0);
-    }
+        getNextToken();
+        auto type = parseType();
+        if(type == nullptr){
+            cout << "Expected Type" << endl;
+            exit(0);
+        }
 
-    getNextToken();
-    if(this->nextToken->getTokenType() != equals){
-        cout << "Expected '='" << endl;
-        exit(0);
-    }
+        getNextToken();
+        if(this->nextToken->getTokenType() != equals){
+            cout << "Expected '='" << endl;
+            exit(0);
+        }
 
-    getNextToken();
-    auto exp = parseExpression();
-    if(type == nullptr){
-        cout << "Expected Expression" << endl;
-        exit(0);
-    }
+        getNextToken();
+        auto exp = parseExpression();
+        if(type == nullptr){
+            cout << "Expected Expression" << endl;
+            exit(0);
+        }
 
-    auto node = new ASTvariableDecl(ident, type, exp);
+        node = new ASTvariableDecl(ident, type, exp);
+    }
+    
     return node;
 }
 
@@ -302,17 +339,29 @@ ASTstatement * parser::parseFunctionDecl(){
     getNextToken();
     bool flag = false;
     auto ident = parseIdent();
+    if(ident == nullptr){
+        cout << "Expected identifier" << endl;
+        exit(0);
+    }
+    
+    getNextToken();
     if(this->nextToken->getTokenType() != openCircleBracket){
         cout << "Expected '('" << endl;
         exit(0);
     }
+
     getNextToken();
     auto formalp = parseFormalParams();
     if(formalp != nullptr){
         flag = true;
-        getNextToken();
+    }
+
+    if(this->nextToken->getTokenType() != closeCircleBracket){
+        cout << "Expected ')'" << endl;
+        exit(0);
     }
     
+    getNextToken();
     if(this->nextToken->getTokenType() != returnFunc){
         cout << "Expected '->'" << endl;
         exit(0);
@@ -320,11 +369,19 @@ ASTstatement * parser::parseFunctionDecl(){
 
     getNextToken();
     auto type = parseType();
+    if(type == nullptr){
+        cout << "Expected type" << endl;
+        exit(0);
+    }
 
     getNextToken();
     auto block = parseBlock();
+    if(block == nullptr){
+        cout << "Expected block" << endl;
+        exit(0);
+    }
 
-    if(flag = true){
+    if(flag == true){
         return new ASTfunctionDecl(ident, formalp, type, block);
     }
 
@@ -333,22 +390,45 @@ ASTstatement * parser::parseFunctionDecl(){
 
 ASTformalParams * parser::parseFormalParams(){
     auto formalp = parseFormalParam();
-    getNextToken();
-    while(this->nextToken->getTokenType() != comma){
+    vector<ASTformalParam *> * formalparams = new vector<ASTformalParam *>();
+    if(formalp == nullptr){
+        return nullptr;
+    }else{
         getNextToken();
-        formalp = parseFormalParam();
-        getNextToken();
-    }
+        ASTformalParam * formalp2;
+        while(this->nextToken->getTokenType() == comma){
+            getNextToken();
+            formalp2 = parseFormalParam();
+            if(formalp2 == nullptr){
+                return nullptr;
+            }else{
+                formalparams->push_back(formalp2);
+            }
+            getNextToken();
+        }
 
-    auto node = new ASTformalParams(formalp);
-    return node;
+        auto node = new ASTformalParams(formalp, formalparams);
+        return node;
+    }
+    
 }
 
 ASTformalParam * parser::parseFormalParam(){
-    auto ident = parseIdent();
-    auto type = parseType();
+    ASTformalParam * node = nullptr;
 
-    return new ASTformalParam(ident, type);
+    if(this->nextToken->getTokenType() == variable){
+        auto ident = parseIdent();
+        getNextToken();
+        if(this->nextToken->getTokenType() != colon){
+            cout << "Expected ':'";
+            exit(0);
+        }
+        getNextToken();
+        auto type = parseType();
+        node = new ASTformalParam(ident, type);
+    }
+    
+    return node;
 }
 
 ASTidentifier * parser::parseIdent(){
@@ -506,9 +586,15 @@ ASTexpression * parser::parseFactor(){
 
     switch(this->nextToken->getTokenType()){
     case variable:
-        ident = this->nextToken->getLexeme(); 
-        node = new ASTidentifier(ident);
-        break;
+        if(this->nextNextToken->getTokenType() == openCircleBracket){
+            node = parseFunctionCall();
+            break;
+        }else{
+            ident = this->nextToken->getLexeme(); 
+            node = new ASTidentifier(ident);
+            break;
+        }
+        
     case openCircleBracket:
         node = parseSubExpression();
         break;
@@ -534,11 +620,55 @@ ASTexpression * parser::parseFactor(){
         node = parseLiteral();
         break;
     default:
-        cout << "Expected Factor" << endl;
-        exit(0);
         break;
     }
     return node;
+}
+
+ASTexpression * parser::parseFunctionCall(){
+    auto ident = parseIdent();
+    bool flag = false;
+    getNextToken();
+    if(this->nextToken->getTokenType() != openCircleBracket){
+        cout << "Expected '('" << endl;
+        exit(0);
+    }
+    getNextToken();
+
+    auto Aparam = parseActualParams();
+    if(Aparam != nullptr){
+        flag = true;
+    }
+
+    if(this->nextToken->getTokenType() != closeCircleBracket){
+        cout << "Expected ')'" << endl;
+        exit(0);
+    }
+
+    if(flag){
+        return new ASTfunctionCall(ident, Aparam);
+    }
+    return new ASTfunctionCall(ident);
+}
+
+ASTactualParams * parser::parseActualParams(){
+    auto exp = parseExpression();
+    vector<ASTexpression * > * exps = new vector<ASTexpression *>();
+    if(exp == nullptr){
+        return nullptr;
+    }
+
+    while(this->nextToken->getTokenType() == comma){
+        getNextToken();
+        auto exp2 = parseExpression();
+        if(exp2 == nullptr){
+            return nullptr;
+        }else{
+            exps->push_back(exp2);
+        }
+    }
+
+    return new ASTactualParams(exp, exps);
 }
 
 ASTexpression * parser::parseLiteral(){
@@ -597,17 +727,23 @@ void parser::parse(){
         
         default:
             auto stmt = parseStatement();
-            if(!stmt){
-                getNextToken();
-            }else{
-                if(this->nextToken->getTokenType() ==  endOfExpression){
-                    statements->push_back(stmt);
+            if(stmt != nullptr){
+                statements->push_back(stmt);
+                if(this->nextToken->getTokenType() == endOfExpression){
                     getNextToken();
                 }
+            }else{
+                cout << "rip" << endl;
+                getNextToken();
             }
+            
             break;
         }
     }
     std::cout<< "Finished Parsing" << endl;
+
+    xml xmlParse(statements);
+    cout << endl;
+    xmlParse.beginXML();
 }
 

@@ -11,19 +11,28 @@ public:
     void parseStatement(ASTstatement * stmt);
 
     // Instructions
-    void variableDecl(ASTvariableDecl * varDecl); // x
-    void assignment(ASTassignment * ass);  // x
-    void ifStatement(ASTifStatement * ifS); //x
-    void forStatement(ASTforStatement * forS); // x
+    void variableDecl(ASTvariableDecl * varDecl); 
+    void assignment(ASTassignment * ass);  
+    void ifStatement(ASTifStatement * ifS); 
+    void forStatement(ASTforStatement * forS); 
     void whileStatement(ASTwhileStatement * whileS);
-    void rtrnStatement(ASTrtrnStatement * rtrn); // x
-    void printStatement(ASTprintStatement * print); // x
-    void functionDecl(ASTfunctionDecl * dec); // x
-    void block(ASTblock * blk); // x
+    void rtrnStatement(ASTrtrnStatement * rtrn); 
+    void printStatement(ASTprintStatement * print); 
+    void functionDecl(ASTfunctionDecl * dec); 
+    void block(ASTblock * blk); 
 
     void expression(ASTexpression * exp);
+    void expression2(ASTexpression * exp);
     void formalParams(ASTformalParams * fparams);
     void formalParam(ASTformalParam * fparam);
+    void additive(ASTadditiveOp * add);
+    void multiplicative(ASTmultiplicativeOp * mul);
+    void relational(ASTrelationalOp * rel);
+    void literal(ASTliteral * lit);
+    void functionCall(ASTfunctionCall * func);
+    void subExpression(ASTsubExpression * sub);
+    void unary(ASTunary * u);
+    void actualParams(ASTactualParams * a);
 };
 
 xml::xml(vector<ASTstatement *> * statements){
@@ -95,7 +104,6 @@ void xml::variableDecl(ASTvariableDecl * varDecl){
     this->tabCounter += 1;
     tab();
     cout << "<Var Type=" + varDecl->type->val + ">" + varDecl->ident->val + "</Var>" << endl;
-    tab();
     expression(varDecl->exp);
     this->tabCounter -= 1;
     tab();
@@ -128,15 +136,10 @@ void xml::block(ASTblock * blk){
     cout << "<\\block>" << endl;
 }
 
-void xml::expression(ASTexpression * exp){
-    cout << "expression" << endl;
-}
-
 void xml::printStatement(ASTprintStatement * print){
     tab();
     cout << "<Print>" << endl;
     this->tabCounter += 1;
-    tab();
     expression(print->RHS);
     this->tabCounter -= 1;
     tab();
@@ -188,7 +191,6 @@ void xml::rtrnStatement(ASTrtrnStatement * rtrn){
     tab();
     cout << "<return>" << endl;
     this->tabCounter += 1;
-    tab();
     expression(rtrn->exp);
     this->tabCounter -= 1;
     tab();
@@ -240,4 +242,236 @@ void xml::whileStatement(ASTwhileStatement * whileS){
     this->tabCounter -= 1;
     tab();
     cout << "<\\while>" << endl;
+}
+
+void xml::expression(ASTexpression * exp){
+    tab();
+    cout << "<Expression>" << endl;
+    this->tabCounter += 1;
+    bool test = false;
+    ASTidentifier* ident = dynamic_cast<ASTidentifier*>(exp->data);
+    if(ident != NULL){
+        tab();
+        cout << "<ident>" + ident->val + "<\\ident>" << endl;
+        test = true;
+    }
+
+    ASTfunctionCall* func = dynamic_cast<ASTfunctionCall*>(exp->data);
+    if(func != NULL){
+        functionCall(func);
+        test = true;
+    }
+
+    ASTsubExpression* sub = dynamic_cast<ASTsubExpression*>(exp->data);
+    if(sub != NULL){
+        subExpression(sub);
+        test = true;
+    }
+
+    ASTunary* u = dynamic_cast<ASTunary*>(exp->data);
+    if(u != NULL){
+        unary(u);
+        test = true;
+    }
+
+    ASTliteral* lit = dynamic_cast<ASTliteral*>(exp->data);
+    if(lit != NULL){
+        literal(lit);
+        test = true;
+    }
+
+    ASTmultiplicativeOp* mul = dynamic_cast<ASTmultiplicativeOp*>(exp->data);
+    if(mul != NULL){
+        multiplicative(mul);
+        test = true;
+    }
+
+    ASTadditiveOp* add = dynamic_cast<ASTadditiveOp*>(exp->data);
+    if(add != NULL){
+        additive(add);
+        test = true;
+    }
+
+    ASTrelationalOp* rel = dynamic_cast<ASTrelationalOp*>(exp->data);
+    if(rel != NULL){
+        relational(rel);
+        test = true;
+    }
+
+    if(!test){
+        cout << "Nothing found" << endl;
+    }
+
+    this->tabCounter -= 1;
+    tab();
+    cout << "<\\Expression>" << endl;
+}
+
+void xml::expression2(ASTexpression * exp){
+    tab();
+    cout << "<Expression>" << endl;
+    this->tabCounter += 1;
+    bool test = false;
+    ASTidentifier* ident = dynamic_cast<ASTidentifier*>(exp);
+    if(ident != NULL){
+        tab();
+        cout << "<ident>" + ident->val + "<\\ident>" << endl;
+        test = true;
+    }
+
+    ASTfunctionCall* func = dynamic_cast<ASTfunctionCall*>(exp);
+    if(func != NULL){
+        functionCall(func);
+        test = true;
+    }
+
+    ASTsubExpression* sub = dynamic_cast<ASTsubExpression*>(exp);
+    if(sub != NULL){
+        subExpression(sub);
+        test = true;
+    }
+
+    ASTunary* u = dynamic_cast<ASTunary*>(exp);
+    if(u != NULL){
+        unary(u);
+        test = true;
+    }
+
+    ASTliteral* lit = dynamic_cast<ASTliteral*>(exp);
+    if(lit != NULL){
+        literal(lit);
+        test = true;
+    }
+
+    ASTmultiplicativeOp* mul = dynamic_cast<ASTmultiplicativeOp*>(exp);
+    if(mul != NULL){
+        multiplicative(mul);
+        test = true;
+    }
+
+    ASTadditiveOp* add = dynamic_cast<ASTadditiveOp*>(exp);
+    if(add != NULL){
+        additive(add);
+        test = true;
+    }
+
+    ASTrelationalOp* rel = dynamic_cast<ASTrelationalOp*>(exp);
+    if(rel != NULL){
+        relational(rel);
+        test = true;
+    }
+
+    if(!test){
+        cout << "Nothing found" << endl;
+    }
+
+    this->tabCounter -= 1;
+    tab();
+    cout << "<\\Expression>" << endl;
+}
+
+void xml::additive(ASTadditiveOp * add){
+    tab();
+    cout << "<Additive symbol = '" + add->val + "'>" << endl;
+    this->tabCounter += 1;
+    expression2(add->LHS);
+    expression2(add->RHS);
+    this->tabCounter -= 1;
+    tab();
+    cout << "<\\Additive>" << endl;
+}
+
+void xml::multiplicative(ASTmultiplicativeOp * mul){
+    tab();
+    cout << "<Multiplicative symbol = '" + mul->val + "'>" << endl;
+    this->tabCounter += 1;
+    expression2(mul->LHS);
+    expression2(mul->RHS);
+    this->tabCounter -= 1;
+    tab();
+    cout << "<\\Multiplicative>" << endl;
+}
+
+void xml::relational(ASTrelationalOp * rel){
+    tab();
+    cout << "<Relational symbol = '" + rel->val + "'>" << endl;
+    this->tabCounter += 1;
+    expression2(rel->LHS);
+    expression2(rel->RHS);
+    this->tabCounter -= 1;
+    tab();
+    cout << "<\\Relational>" << endl;
+}
+
+void xml::literal(ASTliteral * lit){
+    ASTbooleanLiteral* b = dynamic_cast<ASTbooleanLiteral*>(lit);
+    if(b != NULL){
+        tab();
+        cout << "<Boolean>" + b->val + "<\\Boolean>" << endl;
+    }
+
+    ASTintLiteral* i = dynamic_cast<ASTintLiteral*>(lit);
+    if(i != NULL){
+        tab();
+        cout << "<Integer>" + i->val + "<\\Integer>" << endl;
+    }
+
+    ASTfloatLiteral* f = dynamic_cast<ASTfloatLiteral*>(lit);
+    if(f != NULL){
+        tab();
+        cout << "<Float>" + f->val + "<\\Float>" << endl;
+    }
+
+    ASTcharLiteral* c = dynamic_cast<ASTcharLiteral*>(lit);
+    if(c != NULL){
+        tab();
+        cout << "<Char>" + c->val + "<\\Char>" << endl;
+    }
+}
+
+void xml::functionCall(ASTfunctionCall * func){
+    tab();
+    cout << "<Function Call>" << endl;
+    this->tabCounter += 1;
+    tab();
+    cout << "<Identifier>" + func->ident->val + "<\\Identifier>" << endl;
+    actualParams(func->a);
+    this->tabCounter -= 1;
+    tab();
+    cout << "<\\Function Call>" << endl;
+}
+
+void xml::subExpression(ASTsubExpression * sub){
+    tab();
+    cout << "<Sub Expression>" << endl;
+    this->tabCounter += 1;
+    expression(sub->exp);
+    this->tabCounter -= 1;
+    tab();
+    cout << "<\\Sub Expression>" << endl;
+}
+
+void xml::unary(ASTunary * u){
+    tab();
+    cout << "<Unary>" << endl;
+    this->tabCounter += 1;
+    tab();
+    cout << "<Indicator symbol = '" + u->LHS + "'>" << endl;
+    expression(u->RHS);
+    this->tabCounter -= 1;
+    tab();
+    cout << "<\\Unary>" << endl;
+}
+
+void xml::actualParams(ASTactualParams * a){
+    tab();
+    cout << "<Actual Parameters>" << endl;
+    this->tabCounter += 1;
+    expression(a->exp);
+    for(vector<ASTexpression *>::iterator itr = a->exps->begin(), itr_end = a->exps->end(); itr != itr_end; ++itr){
+        expression(*itr);
+    }
+    this->tabCounter -= 1;
+    tab();
+    cout << "<\\Actual Parameters>" << endl;
 }

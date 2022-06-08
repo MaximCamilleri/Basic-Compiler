@@ -44,16 +44,19 @@ ASTstatement::~ASTstatement(){
 // Expression
 class ASTexpression : public ASTnode{
 public:
+    ASTexpression(ASTexpression * data);
     ASTexpression();
     virtual ~ASTexpression();
+    ASTexpression * data;
 
-    ASTsimpleExpr * simpleExpr;
-    vector<ASTrelationalOp> * ro;
-    vector<ASTsimpleExpr> * sompleExprs;
 };
 
+ASTexpression::ASTexpression(ASTexpression * data){
+    this->data = data;
+}
+
 ASTexpression::ASTexpression(){
-    
+
 }
 
 ASTexpression::~ASTexpression(){
@@ -337,10 +340,6 @@ class ASTsimpleExpr : public ASTexpression{
 public:
     ASTsimpleExpr();
     virtual ~ASTsimpleExpr();
-
-    ASTterm * term;
-    vector<ASTadditiveOp> * additiveOp;
-    vector<ASTterm> * terms;
 };
 
 ASTsimpleExpr::ASTsimpleExpr(){
@@ -356,10 +355,6 @@ class ASTterm : public ASTsimpleExpr{
 public:
     ASTterm();
     virtual ~ASTterm();
-
-    ASTfactor * factor;
-    vector<ASTmultiplicativeOp> * multiOp;
-    vector<ASTfactor> * factors;
 };
 
 ASTterm::ASTterm(){
@@ -373,9 +368,16 @@ ASTterm::~ASTterm(){
 // Factor
 class ASTfactor : public ASTterm{
 public:
+    ASTfactor(ASTfactor * fac);
     ASTfactor();
     virtual ~ASTfactor();
+
+    ASTfactor * fac;
 };
+
+ASTfactor::ASTfactor(ASTfactor * fac){
+    this->fac = fac;
+}
 
 ASTfactor::ASTfactor(){
 
@@ -467,14 +469,18 @@ ASTfunctionCall::~ASTfunctionCall(){
 // Relational Operator 
 class ASTrelationalOp : public ASTexpression{
 public:
-    ASTrelationalOp(string val);
+    ASTrelationalOp(string val, ASTexpression * LHS, ASTexpression * RHS);
     virtual ~ASTrelationalOp();
 
     string val;
+    ASTexpression * LHS;
+    ASTexpression * RHS;
 };
 
-ASTrelationalOp::ASTrelationalOp(string val){
+ASTrelationalOp::ASTrelationalOp(string val, ASTexpression * LHS, ASTexpression * RHS){
     this->val = val;
+    this->LHS = LHS;
+    this->RHS = RHS;
 }
 
 ASTrelationalOp::~ASTrelationalOp(){
@@ -482,16 +488,20 @@ ASTrelationalOp::~ASTrelationalOp(){
 }
 
 // Additive Operator
-class ASTadditiveOp : public ASTexpression{
+class ASTadditiveOp : public ASTsimpleExpr{
 public:
-    ASTadditiveOp(string val);
+    ASTadditiveOp(string val, ASTexpression * LHS, ASTexpression * RHS);
     virtual ~ASTadditiveOp();
 
     string val;
+    ASTexpression * LHS;
+    ASTexpression * RHS;
 };
 
-ASTadditiveOp::ASTadditiveOp(string val){
+ASTadditiveOp::ASTadditiveOp(string val, ASTexpression * LHS, ASTexpression * RHS){
     this->val = val;
+    this->LHS = LHS;
+    this->RHS = RHS;
 }
 
 ASTadditiveOp::~ASTadditiveOp(){
@@ -501,14 +511,18 @@ ASTadditiveOp::~ASTadditiveOp(){
 // Multiplicative Operator
 class ASTmultiplicativeOp : public ASTterm{
 public:
-    ASTmultiplicativeOp(string val);
+    ASTmultiplicativeOp(string val, ASTexpression * LHS, ASTexpression * RHS);
     virtual ~ASTmultiplicativeOp();
 
     string val;
+    ASTexpression * LHS;
+    ASTexpression * RHS;
 };
 
-ASTmultiplicativeOp::ASTmultiplicativeOp(string val){
+ASTmultiplicativeOp::ASTmultiplicativeOp(string val, ASTexpression * LHS, ASTexpression * RHS){
     this->val = val;
+    this->LHS = LHS;
+    this->RHS = RHS;
 }
 
 ASTmultiplicativeOp::~ASTmultiplicativeOp(){

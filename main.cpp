@@ -12,7 +12,7 @@ int main(){
    //    cout << "Lexeme: " << token->getLexeme() << " Token Type: " << token->getTokenType() << endl;
    // }
 
-   parser Pr(sc, "testProgram.txt");
+   parser Pr(sc, "program.txt");
    Pr.parse();
 
    return EXIT_SUCCESS;

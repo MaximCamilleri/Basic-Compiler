@@ -36,9 +36,9 @@ public:
     ASTexpression * parseSubExpression();
     ASTexpression * parseFunctionCall();
     ASTactualParams * parseActualParams();
-    ASTexpression * parseRelationalOp();
-    ASTexpression * parseAdditiveOp();
-    ASTexpression * parseMultiplicativeOp();
+    ASTrelationalOp * parseRelationalOp(ASTexpression * LHS);
+    ASTadditiveOp * parseAdditiveOp(ASTexpression * LHS);
+    ASTmultiplicativeOp * parseMultiplicativeOp(ASTexpression * LHS);
     ASTexpression * parseLiteral();
     ASTstatement * parseBooleanLiteral();
     ASTidentifier * parseIdent();
@@ -169,11 +169,11 @@ ASTstatement * parser::parsePrintStatement(){
 ASTstatement * parser::parseRtrnStatement(){
     getNextToken();
     auto exp = parseExpression();
-    if(exp = nullptr){
+    if(exp == nullptr){
         cout << "Expected Expression";
         exit(0);
     }
-    auto node =new ASTrtrnStatement(exp);
+    auto node = new ASTrtrnStatement(exp);
     return node;
 }
 
@@ -476,26 +476,24 @@ ASTexpression * parser::parseExpression(){
     if(!LHS){
         return nullptr;
     }
-
-    auto temp = parseRelationalOp();
-
-    while(temp != nullptr){
-        getNextToken();
-        auto temp2 = parseSimpleExpr();
-        if(temp2 == nullptr){
-            cout << "Expected Simple Expression";
-            exit(0);
-        }
-        temp = parseRelationalOp();
+    while(this->nextToken->getTokenType() == conditions){
+        LHS = parseRelationalOp(LHS);
     }
 
-    return LHS;
+    auto exp = new ASTexpression(LHS);
+
+    return exp;
 }
 
-ASTexpression * parser::parseRelationalOp(){
-    ASTexpression * node = nullptr;
-    if(this->nextToken->getTokenType() == conditions){
-        node = new ASTrelationalOp(this->nextToken->getLexeme());
+ASTrelationalOp * parser::parseRelationalOp(ASTexpression * LHS){
+    ASTrelationalOp * node = nullptr;
+    auto token = this->nextToken->getLexeme();
+    getNextToken();
+    auto temp = parseSimpleExpr();
+    if(temp != nullptr){
+        node = new ASTrelationalOp(token, LHS, temp);
+    }else{
+        cout << "Expected Simple Expr" << endl;
     }
     return node;
 }
@@ -505,78 +503,59 @@ ASTexpression * parser::parseSimpleExpr(){
     if(!LHS){
         return nullptr;
     }
+    while(this->nextToken->getTokenType() == _plus ||
+          this->nextToken->getTokenType() == _minus ||
+          this->nextToken->getTokenType() == _or){
 
-    auto temp = parseAdditiveOp();
-
-    while(temp != nullptr){
-        getNextToken();
-        auto temp2 = parseTerm();
-        if(temp2 == nullptr){
-            cout << "Expected Term";
-            exit(0);
-        }
-        temp = parseAdditiveOp();
+        LHS = parseAdditiveOp(LHS);
     }
 
     return LHS;
 }
 
-ASTexpression * parser::parseAdditiveOp(){
-    ASTexpression * node = nullptr;
-    if(this->nextToken->getTokenType() == _plus ||
-       this->nextToken->getTokenType() == _minus ||
-       this->nextToken->getTokenType() == _or){
-           node = new ASTadditiveOp(this->nextToken->getLexeme());
+ASTadditiveOp * parser::parseAdditiveOp(ASTexpression * LHS){
+    ASTadditiveOp * node = nullptr;
+    auto token = this->nextToken->getLexeme();
+    getNextToken();
+    auto temp = parseTerm();
+    if(temp != nullptr){
+        node = new ASTadditiveOp(token, LHS, temp);
+    }else{
+        cout << "Expected Term" << endl;
     }
-
     return node;
 }
 
 ASTexpression * parser::parseTerm(){
-    vector<ASTexpression *> *term = new vector<ASTexpression *>();
-    auto LHS = parseFactor();
+    ASTexpression * LHS = parseFactor();
     if(!LHS){
         return nullptr;
-    }else{
-        term->push_back(LHS);
     }
 
     getNextToken();
-    auto temp = parseMultiplicativeOp();
+    while(this->nextToken->getTokenType() == _divide ||
+          this->nextToken->getTokenType() == _multiply ||
+          this->nextToken->getTokenType() == _and){
 
-    while(temp != nullptr){
+        LHS = parseMultiplicativeOp(LHS);
         getNextToken();
-        auto temp2 = parseFactor();
-        if(temp2 == nullptr){
-            cout << "Expected Factor";
-            exit(0);
-        }else{
-            term->push_back(temp);
-            term->push_back(temp2);
-        }
-        getNextToken();
-        temp = parseMultiplicativeOp();
     }
+
     return LHS;
 }
 
-ASTexpression * parser::parseMultiplicativeOp(){
-    ASTexpression * node = nullptr;
-    switch (this->nextToken->getTokenType())
-    {
-    case _divide:
-        node = new ASTmultiplicativeOp(this->nextToken->getLexeme());
-        break;
-    case _multiply:
-        node = new ASTmultiplicativeOp(this->nextToken->getLexeme());
-        break;
-    case _and:
-        node = new ASTmultiplicativeOp(this->nextToken->getLexeme());
-        break;
-
-    default:
-        break;
+ASTmultiplicativeOp * parser::parseMultiplicativeOp(ASTexpression * LHS){
+    ASTmultiplicativeOp * node = nullptr;
+    auto token = this->nextToken->getLexeme();
+    getNextToken();
+    auto temp = parseFactor();
+    if(temp != nullptr){
+        node = new ASTmultiplicativeOp(token, LHS, temp);
+    }else{
+        cout << "Expected Factor" << endl;
+        exit(0);
     }
+
     return node;
 }
 

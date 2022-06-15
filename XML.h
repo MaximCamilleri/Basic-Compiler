@@ -1,4 +1,5 @@
 #include "ASTclasses.h"
+#include <stdexcept>
 
 class xml{
 private:
@@ -130,7 +131,9 @@ void xml::block(ASTblock * blk){
     tab();
     cout << "<block>" << endl;
     this->tabCounter += 1;
-    parseStatement(blk->stmt);
+    for(auto itr = blk->stmt->begin(), itr_end = blk->stmt->end(); itr != itr_end; ++itr){
+        parseStatement(*itr);
+    }
     this->tabCounter -= 1;
     tab();
     cout << "<\\block>" << endl;
@@ -201,15 +204,12 @@ void xml::ifStatement(ASTifStatement * ifS){
     tab();
     cout << "<if>" << endl;
     this->tabCounter += 1;
-    tab();
     expression(ifS->exp);
-    tab();
     block(ifS->blk);
     if(ifS->_else != nullptr){
         tab();
         cout << "<else>" << endl;
         this->tabCounter += 1;
-        tab();
         block(ifS->_else);
         this->tabCounter -= 1;
         tab();
@@ -222,9 +222,11 @@ void xml::ifStatement(ASTifStatement * ifS){
 
 void xml::forStatement(ASTforStatement * forS){
     tab();
-    cout << "for" << endl;
+    cout << "<for>" << endl;
     this->tabCounter += 1;
-    variableDecl(forS->vDecl);
+    if(forS->vDecl != nullptr){
+        variableDecl(forS->vDecl);
+    }
     expression(forS->exp);
     assignment(forS->ass);
     block(forS->b);

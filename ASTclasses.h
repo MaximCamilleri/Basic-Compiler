@@ -83,13 +83,13 @@ ASTidentifier::~ASTidentifier(){
 // Block
 class ASTblock : public ASTstatement{
 public:
-    ASTblock(ASTstatement * stmt);
+    ASTblock(vector<ASTstatement *> * stmt);
     virtual ~ASTblock();
 
-    ASTstatement * stmt;
+    vector<ASTstatement *> * stmt;
 };
 
-ASTblock::ASTblock(ASTstatement * stmt){
+ASTblock::ASTblock(vector<ASTstatement *> * stmt){
     this->stmt = stmt;
 }
 
@@ -197,7 +197,7 @@ ASTformalParams::~ASTformalParams(){
 class ASTfunctionDecl : public ASTstatement{
 public:
     ASTfunctionDecl(ASTidentifier * ident, ASTformalParams * param, ASTtype * type, ASTblock * block);
-     ASTfunctionDecl(ASTidentifier * ident, ASTtype * type, ASTblock * block);
+    ASTfunctionDecl(ASTidentifier * ident, ASTtype * type, ASTblock * block);
     virtual ~ASTfunctionDecl();
 
     ASTidentifier * ident = nullptr;
@@ -266,6 +266,7 @@ ASTforStatement::ASTforStatement(ASTexpression *exp, ASTassignment *ass, ASTbloc
     this->exp = exp;
     this->ass = ass;
     this->b = b;
+    this->vDecl = nullptr;
 }
 
 ASTforStatement::~ASTforStatement(){

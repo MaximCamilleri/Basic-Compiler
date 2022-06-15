@@ -1,3 +1,0 @@
-fn Sq(x:float) -> float {
-    return x + x + x * 3;
-}

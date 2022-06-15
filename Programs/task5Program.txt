@@ -1,0 +1,20 @@
+//function definition for power
+fn Pow(x:float, n:int) -> float{
+    let y:float = 1.0;                        //Declare y and set it to 1.0
+    if(n > 0){
+        for(; n > 0; n=n+1){
+            y = y * x;                       //Assignment y - y * x;
+        }
+    }
+    else
+    {
+        for(; n < 0; n=n+1){
+            y = y/x;                         //Assignment y = y /x;                 
+        }
+    }
+    return y;
+}
+
+let x:float = Pow(2.1, 1.0);
+
+print x;        //prints to console 1667.988

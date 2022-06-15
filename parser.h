@@ -1,5 +1,5 @@
 #include "scanner.h"
-#include "XML.h"
+#include "semanticAnalysisPass.h"
 
 using namespace std;
 
@@ -239,7 +239,7 @@ ASTstatement * parser::parseForStatement(){
 
     getNextToken();
     auto block = parseBlock();
-    if(block = nullptr){
+    if(block == nullptr){
         cout << "Expected Block";
         exit(0);
     }
@@ -268,6 +268,8 @@ ASTstatement * parser::parseWhileStatement(){
 }
 
 ASTblock * parser::parseBlock(){
+    vector<ASTstatement *> * stmts = new vector<ASTstatement *>();
+    ASTblock * block;
     if(this->nextToken->getTokenType() != openCurlyBracket){
         cout << "Expected '{'";
         exit(0);
@@ -275,21 +277,27 @@ ASTblock * parser::parseBlock(){
     getNextToken();
 
     auto stmt = parseStatement();
-    ASTblock * block = new ASTblock(stmt);
-
+    stmts->push_back(stmt);
+    
     getNextToken();
     if(this->nextToken->getTokenType() == closeCurlyBracket){
-        getNextToken();
+        if(this->nextNextToken->getTokenType() != closeCurlyBracket){
+            getNextToken();
+        }
+        
+        block = new ASTblock(stmts);
         return block;
     }else{
         while(this->nextToken->getTokenType() != closeCurlyBracket){
             auto stmt = parseStatement();
+            stmts->push_back(stmt);
             if(this->nextToken->getTokenType() == endOfExpression){
                 getNextToken();
             }
         }
         getNextToken();
     }
+    block = new ASTblock(stmts);
     return block;
 }
 
@@ -721,8 +729,13 @@ void parser::parse(){
     }
     std::cout<< "Finished Parsing" << endl;
 
+    // XML pass
     xml xmlParse(statements);
     cout << endl;
     xmlParse.beginXML();
+
+    // Semantic Analysis Pass
+    semanticAnalysis saParse(statements);
+    saParse.beginSemanticAnalysis();
 }
 

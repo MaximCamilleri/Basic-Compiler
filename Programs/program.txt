@@ -15,7 +15,7 @@ fn XGreaterY_2(x:float, y:float) -> bool {
 
 fn AverageOfThree(x:float, y:float, z:float) -> float {
     let total:float = x + y + z;
-    return total / 3;
+    return total / 3.0;
 }
 
 /*
@@ -23,8 +23,8 @@ fn AverageOfThree(x:float, y:float, z:float) -> float {
 * Note the use of the brackets in the expression following 
 * the return statement.
 */
-fn AverageOfThree_2(x:float, y:float, x:float) -> float {
-    return (x + y + z) /3;
+fn AverageOfThree_2(x:float, y:float, z:float) -> float {
+    return (x + y + z) /3.0;
 }
 
 

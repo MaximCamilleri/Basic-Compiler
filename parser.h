@@ -188,7 +188,6 @@ ASTstatement * parser::parseIfStatement(){
 
     getNextToken();
     auto block = parseBlock();
-    
     if(this->nextNextToken->getTokenType() == _else){
         getNextToken();
         ASTblock * elseBlock;
@@ -196,7 +195,7 @@ ASTstatement * parser::parseIfStatement(){
             getNextToken();
             elseBlock = parseBlock();
         }
-        getNextToken();
+        //getNextToken();
         return new ASTifStatement(exp, block, elseBlock);
     }else{
         return new ASTifStatement(exp, block);
@@ -271,8 +270,6 @@ ASTstatement * parser::parseWhileStatement(){
 }
 
 ASTblock * parser::parseBlock(){
-    this->blockDept += 1;
-    bool hasRun = false;
     vector<ASTstatement *> * stmts = new vector<ASTstatement *>();
     ASTblock * block;
     if(this->nextToken->getTokenType() != openCurlyBracket){
@@ -281,33 +278,15 @@ ASTblock * parser::parseBlock(){
     }
     getNextToken();
 
-    auto stmt = parseStatement();
-    stmts->push_back(stmt);
-    getNextToken();
-    if(this->nextToken->getTokenType() == closeCurlyBracket){
-        // if(this->blockDept < 3){
-        //     getNextToken();
-        // }
-        if(hasRun){
-            getNextToken();
-        }
-        
-        block = new ASTblock(stmts);
-        this->blockDept -= 1;
-        return block;
-    }else{
-        while(this->nextToken->getTokenType() != closeCurlyBracket){
-            auto stmt = parseStatement();
-            stmts->push_back(stmt);
-            hasRun = true;
-            if(this->nextToken->getTokenType() == endOfExpression){
-                getNextToken();
-            }
-        }
+    for(;;){
+        auto stmt = parseStatement();
+        stmts->push_back(stmt);
         getNextToken();
+        if(this->nextToken->getTokenType() == closeCurlyBracket){
+            break;
+        }
     }
     block = new ASTblock(stmts);
-    this->blockDept -=1;
     return block;
 }
 

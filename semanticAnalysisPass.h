@@ -42,7 +42,7 @@ public:
     string relational(ASTrelationalOp * rel, string varT);
     string literal(ASTliteral * lit, string t);
     void functionCall(ASTfunctionCall * func,  string t);
-    void subExpression(ASTsubExpression * sub);
+    string subExpression(ASTsubExpression * sub, string varT);
     void unary(ASTunary * u);
     void actualParams(ASTactualParams * a);
 
@@ -292,7 +292,7 @@ string semanticAnalysis::expression(ASTexpression * exp, string varT){
 
     ASTsubExpression* sub = dynamic_cast<ASTsubExpression*>(exp->data);
     if(sub != NULL){
-        subExpression(sub);
+        subExpression(sub, varT);
     }
 
     ASTunary* u = dynamic_cast<ASTunary*>(exp->data);
@@ -361,7 +361,7 @@ string semanticAnalysis::expression2(ASTexpression * exp, string varT){
 
     ASTsubExpression* sub = dynamic_cast<ASTsubExpression*>(exp);
     if(sub != NULL){
-        subExpression(sub);
+        return subExpression(sub, varT);
     }
 
     ASTunary* u = dynamic_cast<ASTunary*>(exp);
@@ -483,7 +483,60 @@ string semanticAnalysis::multiplicative(ASTmultiplicativeOp * mul, string varT){
     string LHS = expression2(mul->LHS, varT);
     string RHS = expression2(mul->RHS, varT);
 
-    return LHS;
+    if(LHS == "" && RHS == ""){
+        return "";
+    }
+
+    if(){
+
+    }
+
+    string test = testType(LHS, RHS, varT);
+    if(test == "fail"){
+        throw std::runtime_error("Incorrect Type");
+
+    }else if(test == "int"){
+        if(mul->val == "*"){
+            return to_string(stoi(LHS) * stoi(RHS));
+        }else if(mul->val == "/"){
+            return to_string(stoi(LHS) / stoi(RHS));
+        }else{
+            throw std::runtime_error("Can not use 'or' operator with ints");
+        }
+
+    }else if(test == "float"){
+        if(mul->val == "*"){
+            return to_string(stof(LHS) * stof(RHS));
+        }else if(mul->val == "/"){
+            return to_string(stof(LHS) / stof(RHS));
+        }else{
+            throw std::runtime_error("Can not use 'or' operator with ints");
+        }
+
+    }else if(test == "char"){
+        throw std::runtime_error("Cannot perform multiplicative operation of objects of type car");
+
+    }else if(test == "bool"){
+        int LHSval;
+        int RHSval;
+        if(RHS == "true") RHSval = 1;
+        if(RHS == "false") RHSval = 0;
+        if(LHS == "true") RHSval = 1;
+        if(LHS == "false") RHSval = 0;
+
+        if(mul->val == "*" || mul->val == "or"){
+            if(LHSval + RHSval == 1){
+                return "true";
+            }else{
+                return "false";
+            }
+    
+        }else{
+            throw std::runtime_error("Can not use '/' operator with boolean values");
+        }
+    }
+    
+    return "fail";
 }
 
 string semanticAnalysis::relational(ASTrelationalOp * rel, string varT){
@@ -550,8 +603,8 @@ void semanticAnalysis::functionCall(ASTfunctionCall * funcCall, string t){
 
 }
 
-void semanticAnalysis::subExpression(ASTsubExpression * sub){
-
+string semanticAnalysis::subExpression(ASTsubExpression * sub, string varT){
+    return expression(sub->exp, varT);
 }
 
 void semanticAnalysis::unary(ASTunary * u){

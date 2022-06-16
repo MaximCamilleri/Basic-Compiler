@@ -1,7 +1,6 @@
 fn MoreThan50(x: int) -> bool {
-    let y:bool = true;
     if (x <= 50) {return false;}
-    return y;
+    return false;
 }
 
 let x: int = 45;

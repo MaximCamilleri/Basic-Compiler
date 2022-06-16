@@ -41,9 +41,11 @@ xml::xml(vector<ASTstatement *> * statements){
 }
 
 void xml::beginXML(){
+    cout << "XML Pass:" << endl << endl;
     for( vector<ASTstatement *>::iterator itr = this->statements->begin(), itr_end = this->statements->end(); itr != itr_end; ++itr ){
         parseStatement(*itr);
     }
+    cout << endl;
 }
 
 void xml::parseStatement(ASTstatement * stmt){

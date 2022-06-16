@@ -1,5 +1,6 @@
 #include "semanticAnalysis.h"
 #include <iostream>
+#include <limits>
 
 using namespace std;
 
@@ -9,7 +10,8 @@ class semanticAnalysis{
 private:
     scope * globalScope;
     int hasReturn;
-    bool inIfStatement = false;
+    string varType;
+    int inIfStatement = 0;
     vector<scope *> * scopes;
     vector<ASTstatement *> * statements;
     vector<func *> * functions;
@@ -21,30 +23,30 @@ public:
     void parseStatement(ASTstatement * stmt, ASTtype * t);
 
     // Instructions
-    void variableDecl(ASTvariableDecl * varDecl); 
-    void assignment(ASTassignment * ass);  
-    void ifStatement(ASTifStatement * ifS, ASTtype * t); 
-    void forStatement(ASTforStatement * forS); 
+    void variableDecl(ASTvariableDecl * varDecl);
+    void assignment(ASTassignment * ass);
+    void ifStatement(ASTifStatement * ifS, ASTtype * t);
+    void forStatement(ASTforStatement * forS);
     void whileStatement(ASTwhileStatement * whileS);
-    void rtrnStatement(ASTrtrnStatement * rtrn, ASTtype * t); 
-    void printStatement(ASTprintStatement * print); 
-    void functionDecl(ASTfunctionDecl * dec); 
-    void block(ASTblock * blk, ASTtype * t); 
-    void forBlock(ASTblock * blk, ASTvariableDecl * v); 
-    scope * funcBlock(ASTblock * blk, ASTformalParams * param, ASTtype * t); 
+    void rtrnStatement(ASTrtrnStatement * rtrn, ASTtype * t);
+    void printStatement(ASTprintStatement * print);
+    void functionDecl(ASTfunctionDecl * dec);
+    void block(ASTblock * blk, ASTtype * t);
+    void forBlock(ASTblock * blk, ASTvariableDecl * v);
+    scope * funcBlock(ASTblock * blk, ASTformalParams * param, ASTtype * t);
 
-    string expression(ASTexpression * exp, string varT);
-    string expression2(ASTexpression * exp, string varT);
+    string expression(ASTexpression * exp);
+    string expression2(ASTexpression * exp);
     void formalParams(ASTformalParams * fparams);
     void formalParam(ASTformalParam * fparam);
-    string additive(ASTadditiveOp * add, string varT);
-    string multiplicative(ASTmultiplicativeOp * mul, string varT);
-    string relational(ASTrelationalOp * rel, string varT);
-    string literal(ASTliteral * lit, string t);
-    void functionCall(ASTfunctionCall * func,  string t);
-    string subExpression(ASTsubExpression * sub, string varT);
-    void unary(ASTunary * u);
-    void actualParams(ASTactualParams * a);
+    string additive(ASTadditiveOp * add);
+    string multiplicative(ASTmultiplicativeOp * mul);
+    string relational(ASTrelationalOp * rel);
+    string literal(ASTliteral * lit);
+    void functionCall(ASTfunctionCall * func);
+    string subExpression(ASTsubExpression * sub);
+    string unary(ASTunary * u);
+    string actualParams(ASTactualParams * a);
 
     string testType(string LHS, string RHS, string varT);
 };
@@ -55,12 +57,16 @@ semanticAnalysis::semanticAnalysis(vector<ASTstatement *> * statements){
     this->scopes = new vector<scope *>();
     this->scopes->push_back(globalScope);
     this->functions = new vector<func *>();
+    this->varType = "";
 }
 
 void semanticAnalysis::beginSemanticAnalysis(){
+    cout << "Starting Semantic Analysis" << endl;
     for( vector<ASTstatement *>::iterator itr = this->statements->begin(), itr_end = this->statements->end(); itr != itr_end; ++itr ){
         parseStatement(*itr, nullptr);
+        this->varType = "";
     }
+    cout << "Finishing Semantic Analysis" << endl << endl;
 }
 
 void semanticAnalysis::parseStatement(ASTstatement * stmt, ASTtype * t){
@@ -121,7 +127,8 @@ void semanticAnalysis::variableDecl(ASTvariableDecl * varDecl){
     }
     if(v == nullptr){
         string val;
-        val = expression(varDecl->exp, varDecl->type->val);
+        this->varType = varDecl->type->val;
+        val = expression(varDecl->exp);
         this->scopes->back()->addVar(varDecl->type->val, varDecl->ident->val);
     }else{
         throw std::runtime_error("Variable already exists");
@@ -140,7 +147,8 @@ void semanticAnalysis::assignment(ASTassignment * ass){
     }
 
     if(v != nullptr){
-        string val = expression(ass->RHS, v->getVarType());
+        this->varType = v->getVarType();
+        string val = expression(ass->RHS);
         v = nullptr;
         for(auto itr = this->scopes->begin(), itr_end = this->scopes->end(); itr != itr_end; ++itr){
             if(v != nullptr){
@@ -174,7 +182,7 @@ scope * semanticAnalysis::funcBlock(ASTblock * blk, ASTformalParams * param, AST
         parseStatement(*itr, t);
     }
 
-    if(this->hasReturn < 2){
+    if(this->hasReturn < this->inIfStatement + 1){
         throw std::runtime_error("Function has no return");
     }
     this->hasReturn = 0;
@@ -198,7 +206,8 @@ void semanticAnalysis::forBlock(ASTblock * blk, ASTvariableDecl * v){
 
 
 void semanticAnalysis::printStatement(ASTprintStatement * print){
-    expression(print->RHS, "");
+    this->varType = "";
+    expression(print->RHS);
 }
 
 void semanticAnalysis::functionDecl(ASTfunctionDecl * dec){
@@ -230,22 +239,22 @@ void semanticAnalysis::formalParam(ASTformalParam * fparam){
 }
 
 void semanticAnalysis::rtrnStatement(ASTrtrnStatement * rtrn, ASTtype * t){
-    if(this->inIfStatement == false){
-        this->hasReturn += 2;
+    if(this->inIfStatement < 0){
+        this->hasReturn += std::numeric_limits<int>::max();;
     }else{
         this->hasReturn += 1;
     }
-
-    expression(rtrn->exp, t->val);
+    this->varType = t->val;
+    expression(rtrn->exp);
 }
 
 void semanticAnalysis::ifStatement(ASTifStatement * ifS, ASTtype * t){
-    this->inIfStatement = true;
+    this->inIfStatement += 1;
     block(ifS->blk, t);
     if(ifS->_else != nullptr){
         block(ifS->_else, t);
     }
-    this->inIfStatement = false;
+    this->inIfStatement -= 1;
 }
 
 void semanticAnalysis::forStatement(ASTforStatement * forS){
@@ -256,7 +265,7 @@ void semanticAnalysis::whileStatement(ASTwhileStatement * whileS){
     block(whileS->b, nullptr);
 }
 
-string semanticAnalysis::expression(ASTexpression * exp, string varT){
+string semanticAnalysis::expression(ASTexpression * exp){
     ASTidentifier* ident = dynamic_cast<ASTidentifier*>(exp->data);
     if(ident != NULL){
         var * v = nullptr;
@@ -269,10 +278,11 @@ string semanticAnalysis::expression(ASTexpression * exp, string varT){
         }
 
         if(v != nullptr){
-            if(varT == ""){
+            if(this->varType == ""){
+                this->varType = v->getVarType();
                 return v->getValue();
             }else{
-                if(v->getVarType() == varT){
+                if(v->getVarType() == this->varType){
                     return v->getValue();
                 }else{
                     throw std::runtime_error("Incorrect Type");
@@ -287,12 +297,12 @@ string semanticAnalysis::expression(ASTexpression * exp, string varT){
 
     ASTfunctionCall* func = dynamic_cast<ASTfunctionCall*>(exp->data);
     if(func != NULL){
-        functionCall(func, varT);
+        functionCall(func);
     }
 
     ASTsubExpression* sub = dynamic_cast<ASTsubExpression*>(exp->data);
     if(sub != NULL){
-        subExpression(sub, varT);
+        subExpression(sub);
     }
 
     ASTunary* u = dynamic_cast<ASTunary*>(exp->data);
@@ -302,27 +312,27 @@ string semanticAnalysis::expression(ASTexpression * exp, string varT){
 
     ASTliteral* lit = dynamic_cast<ASTliteral*>(exp->data);
     if(lit != NULL){
-        return literal(lit, varT);
+        return literal(lit);
     }
 
     ASTmultiplicativeOp* mul = dynamic_cast<ASTmultiplicativeOp*>(exp->data);
     if(mul != NULL){
-        return multiplicative(mul, varT);
+        return multiplicative(mul);
     }
 
     ASTadditiveOp* add = dynamic_cast<ASTadditiveOp*>(exp->data);
     if(add != NULL){
-        return additive(add, varT);
+        return additive(add);
     }
 
     ASTrelationalOp* rel = dynamic_cast<ASTrelationalOp*>(exp->data);
     if(rel != NULL){
-        return relational(rel, varT);
+        return relational(rel);
     }
     return "fail";
 }
 
-string semanticAnalysis::expression2(ASTexpression * exp, string varT){
+string semanticAnalysis::expression2(ASTexpression * exp){
     ASTidentifier* ident = dynamic_cast<ASTidentifier*>(exp);
     if(ident != NULL){
         var * v = nullptr;
@@ -335,7 +345,11 @@ string semanticAnalysis::expression2(ASTexpression * exp, string varT){
         }
 
         if(v != nullptr){
+            if(this->varType == ""){
+                this->varType = v->getVarType();
+            }
             if(v->getValue() != ""){
+                
                 return v->getValue();
             }else{
                 if(v->getVarType() == "int"){
@@ -356,12 +370,12 @@ string semanticAnalysis::expression2(ASTexpression * exp, string varT){
 
     ASTfunctionCall* func = dynamic_cast<ASTfunctionCall*>(exp);
     if(func != NULL){
-        functionCall(func, varT);
+        functionCall(func);
     }
 
     ASTsubExpression* sub = dynamic_cast<ASTsubExpression*>(exp);
     if(sub != NULL){
-        return subExpression(sub, varT);
+        return subExpression(sub);
     }
 
     ASTunary* u = dynamic_cast<ASTunary*>(exp);
@@ -371,35 +385,35 @@ string semanticAnalysis::expression2(ASTexpression * exp, string varT){
 
     ASTliteral* lit = dynamic_cast<ASTliteral*>(exp);
     if(lit != NULL){
-        return literal(lit, varT);
+        return literal(lit);
     }
 
     ASTmultiplicativeOp* mul = dynamic_cast<ASTmultiplicativeOp*>(exp);
     if(mul != NULL){
-        return multiplicative(mul, varT);
+        return multiplicative(mul);
     }
 
     ASTadditiveOp* add = dynamic_cast<ASTadditiveOp*>(exp);
     if(add != NULL){
-        return additive(add, varT);
+        return additive(add);
     }
 
     ASTrelationalOp* rel = dynamic_cast<ASTrelationalOp*>(exp);
     if(rel != NULL){
-        return relational(rel, varT);
+        return relational(rel);
     }
     return "fail";
 }
 
-string semanticAnalysis::additive(ASTadditiveOp * add, string varT){
-    auto LHS = expression2(add->LHS, varT);
-    auto RHS = expression2(add->RHS, varT);
+string semanticAnalysis::additive(ASTadditiveOp * add){
+    auto LHS = expression2(add->LHS);
+    auto RHS = expression2(add->RHS);
 
     if(LHS == "" && RHS == ""){
         return "";
     }
 
-    string test = testType(LHS, RHS, varT);
+    string test = testType(LHS, RHS, this->varType);
     if(test == "fail"){
         throw std::runtime_error("Incorrect Type");
 
@@ -479,19 +493,17 @@ string semanticAnalysis::testType(string LHS, string RHS, string varT){
     return "fail";
 }
 
-string semanticAnalysis::multiplicative(ASTmultiplicativeOp * mul, string varT){
-    string LHS = expression2(mul->LHS, varT);
-    string RHS = expression2(mul->RHS, varT);
+string semanticAnalysis::multiplicative(ASTmultiplicativeOp * mul){
+    string LHS = expression2(mul->LHS);
+    string RHS = expression2(mul->RHS);
 
     if(LHS == "" && RHS == ""){
         return "";
     }
 
-    if(){
 
-    }
 
-    string test = testType(LHS, RHS, varT);
+    string test = testType(LHS, RHS, this->varType);
     if(test == "fail"){
         throw std::runtime_error("Incorrect Type");
 
@@ -539,49 +551,62 @@ string semanticAnalysis::multiplicative(ASTmultiplicativeOp * mul, string varT){
     return "fail";
 }
 
-string semanticAnalysis::relational(ASTrelationalOp * rel, string varT){
-    string LHS = expression2(rel->LHS, varT);
-    string RHS = expression2(rel->RHS, varT);
+string semanticAnalysis::relational(ASTrelationalOp * rel){
+    string LHS = expression2(rel->LHS);
+    string RHS = expression2(rel->RHS);
 
     return LHS;
 }
 
-string semanticAnalysis::literal(ASTliteral * lit, string t){
+string semanticAnalysis::literal(ASTliteral * lit){
     ASTbooleanLiteral* b = dynamic_cast<ASTbooleanLiteral*>(lit);
+    
     if(b != NULL){
-        if(t != "bool"){
-            throw std::runtime_error("incorrect return type");
+        if(this->varType == ""){
+            this->varType ="bool";
+        }
+        if(this->varType != "bool"){
+            throw std::runtime_error("incorrect type");
         }
         return b->val;
     }
 
     ASTintLiteral* i = dynamic_cast<ASTintLiteral*>(lit);
     if(i != NULL){
-        if(t != "int"){
-            throw std::runtime_error("incorrect return type");
+        if(this->varType == ""){
+            this->varType ="int";
+        }
+        if(this->varType != "int"){
+            throw std::runtime_error("incorrect type");
         }
         return i->val;
     }
 
     ASTfloatLiteral* f = dynamic_cast<ASTfloatLiteral*>(lit);
     if(f != NULL){
-        if(t != "float"){
-            throw std::runtime_error("incorrect return type");
+        if(this->varType == ""){
+            this->varType ="float";
+        }
+        if(this->varType != "float"){
+            throw std::runtime_error("incorrect type");
         }
         return f->val;
     }
 
     ASTcharLiteral* c = dynamic_cast<ASTcharLiteral*>(lit);
     if(c != NULL){
-        if(t != "char"){
-            throw std::runtime_error("incorrect return type");
+        if(this->varType == ""){
+            this->varType ="char";
+        }
+        if(this->varType != "char"){
+            throw std::runtime_error("incorrect type");
         }
         return c->val;
     }
     return "fail";
 }
 
-void semanticAnalysis::functionCall(ASTfunctionCall * funcCall, string t){
+void semanticAnalysis::functionCall(ASTfunctionCall * funcCall){
     func *f = nullptr;
     
     for(auto itr = this->functions->begin(), itr_end = this->functions->end(); itr != itr_end; ++itr){
@@ -593,26 +618,23 @@ void semanticAnalysis::functionCall(ASTfunctionCall * funcCall, string t){
     if(f == nullptr){
         throw std::runtime_error("Function does not exist");
     }
-    if(t != ""){
-        if(t != f->getReturn()){
+    if(this->varType != ""){
+        if(this->varType != f->getReturn()){
             throw std::runtime_error("Function return type does not match variable assignment");
         }
     }
-    
-
-
 }
 
-string semanticAnalysis::subExpression(ASTsubExpression * sub, string varT){
-    return expression(sub->exp, varT);
+string semanticAnalysis::subExpression(ASTsubExpression * sub){
+    return expression(sub->exp);
 }
 
-void semanticAnalysis::unary(ASTunary * u){
-
+string semanticAnalysis::unary(ASTunary * u){
+    return expression(u->data);
 }
 
-void semanticAnalysis::actualParams(ASTactualParams * a){
-
+string semanticAnalysis::actualParams(ASTactualParams * a){
+    return expression(a->data);
 }
 
 

@@ -55,7 +55,7 @@ parser::parser(scanner lexer, string name){
 void parser::getNextToken(){
     this->nextToken = this->nextNextToken;
     getNextNextToken();
-    cout << "Lexeme: " << this->nextToken->getLexeme() << " Token Type: " << this->nextToken->getTokenType() << endl;
+    //cout << "Lexeme: " << this->nextToken->getLexeme() << " Token Type: " << this->nextToken->getTokenType() << endl;
 }
 
 void parser::getNextNextToken(){
@@ -709,7 +709,7 @@ void parser::parse(){
                     getNextToken();
                 }
             }else{
-                cout << "rip" << endl;
+                //cout << "rip" << endl;
                 getNextToken();
             }
             
@@ -726,5 +726,8 @@ void parser::parse(){
     // Semantic Analysis Pass
     semanticAnalysis saParse(statements);
     saParse.beginSemanticAnalysis();
+
+    execution ex(statements);
+    ex.beginExecution();
 }
 

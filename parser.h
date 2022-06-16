@@ -1,5 +1,5 @@
 #include "scanner.h"
-#include "semanticAnalysisPass.h"
+#include "executionPass.h"
 
 using namespace std;
 
@@ -9,6 +9,7 @@ private:
     program *p;
     token *nextToken;
     token *nextNextToken;
+    int blockDept = 0;
 public:
     parser(scanner lexer, string name);
     void parse();
@@ -188,12 +189,14 @@ ASTstatement * parser::parseIfStatement(){
     getNextToken();
     auto block = parseBlock();
     
-    if(this->nextToken->getTokenType() == _else){
+    if(this->nextNextToken->getTokenType() == _else){
+        getNextToken();
         ASTblock * elseBlock;
         while(this->nextToken->getTokenType() == _else){
             getNextToken();
             elseBlock = parseBlock();
         }
+        getNextToken();
         return new ASTifStatement(exp, block, elseBlock);
     }else{
         return new ASTifStatement(exp, block);
@@ -268,6 +271,8 @@ ASTstatement * parser::parseWhileStatement(){
 }
 
 ASTblock * parser::parseBlock(){
+    this->blockDept += 1;
+    bool hasRun = false;
     vector<ASTstatement *> * stmts = new vector<ASTstatement *>();
     ASTblock * block;
     if(this->nextToken->getTokenType() != openCurlyBracket){
@@ -278,19 +283,23 @@ ASTblock * parser::parseBlock(){
 
     auto stmt = parseStatement();
     stmts->push_back(stmt);
-    
     getNextToken();
     if(this->nextToken->getTokenType() == closeCurlyBracket){
-        if(this->nextNextToken->getTokenType() != closeCurlyBracket){
+        // if(this->blockDept < 3){
+        //     getNextToken();
+        // }
+        if(hasRun){
             getNextToken();
         }
         
         block = new ASTblock(stmts);
+        this->blockDept -= 1;
         return block;
     }else{
         while(this->nextToken->getTokenType() != closeCurlyBracket){
             auto stmt = parseStatement();
             stmts->push_back(stmt);
+            hasRun = true;
             if(this->nextToken->getTokenType() == endOfExpression){
                 getNextToken();
             }
@@ -298,6 +307,7 @@ ASTblock * parser::parseBlock(){
         getNextToken();
     }
     block = new ASTblock(stmts);
+    this->blockDept -=1;
     return block;
 }
 

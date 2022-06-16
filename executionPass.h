@@ -1,12 +1,20 @@
-//#include "semanticAnalysisPass.h"
+#include "semanticAnalysisPass.h"
+
+using namespace std;
+
+bool isFloat(string myString);
 
 class execution{
 private:
+    scope * globalScope;
+    vector<scope *> * scopes;
     vector<ASTstatement *> * statements;
-    scope * head;
+    vector<func *> * functions;
+
 public:
-    execution(vector<ASTstatement *> * statements, scope * head);
-    void beginExecution();
+    execution(vector<ASTstatement *> * statements);
+    void beginSemanticAnalysis();
+
     void parseStatement(ASTstatement * stmt);
 
     // Instructions
@@ -19,33 +27,40 @@ public:
     void printStatement(ASTprintStatement * print); 
     void functionDecl(ASTfunctionDecl * dec); 
     void block(ASTblock * blk); 
+    void forBlock(ASTblock * blk, ASTvariableDecl * v); 
+    scope * funcBlock(ASTblock * blk, ASTformalParams * param); 
 
-    void expression(ASTexpression * exp);
-    void expression2(ASTexpression * exp);
+    string expression(ASTexpression * exp, string varT);
+    string expression2(ASTexpression * exp, string varT);
     void formalParams(ASTformalParams * fparams);
     void formalParam(ASTformalParam * fparam);
-    void additive(ASTadditiveOp * add);
-    void multiplicative(ASTmultiplicativeOp * mul);
-    void relational(ASTrelationalOp * rel);
-    void literal(ASTliteral * lit);
+    string additive(ASTadditiveOp * add, string varT);
+    string multiplicative(ASTmultiplicativeOp * mul, string varT);
+    string relational(ASTrelationalOp * rel, string varT);
+    string literal(ASTliteral * lit);
     void functionCall(ASTfunctionCall * func);
     void subExpression(ASTsubExpression * sub);
     void unary(ASTunary * u);
     void actualParams(ASTactualParams * a);
+
+    string testType(string LHS, string RHS, string varT);
 };
 
-execution::execution(vector<ASTstatement *> * statements, scope * head){
+execution::execution(vector<ASTstatement *> * statements){
     this->statements = statements;
-    this->head = head;
+    this->globalScope = new scope();
+    this->scopes = new vector<scope *>();
+    this->scopes->push_back(globalScope);
+    this->functions = new vector<func *>();
 }
 
-void execution::beginExecution(){
+void execution::beginSemanticAnalysis(){
     for( vector<ASTstatement *>::iterator itr = this->statements->begin(), itr_end = this->statements->end(); itr != itr_end; ++itr ){
         parseStatement(*itr);
     }
 }
 
-void xml::parseStatement(ASTstatement * stmt){
+void execution::parseStatement(ASTstatement * stmt){
     ASTvariableDecl* p1 = dynamic_cast<ASTvariableDecl*>(stmt);
     if(p1 != NULL){
         variableDecl(p1);
@@ -92,33 +107,102 @@ void xml::parseStatement(ASTstatement * stmt){
     }
 }
 
-
 void execution::variableDecl(ASTvariableDecl * varDecl){
-    
+    string val;
+    val = expression(varDecl->exp, varDecl->type->val);
+    this->scopes->back()->addVar(varDecl->type->val, varDecl->ident->val);
 }
 
 void execution::assignment(ASTassignment * ass){
+    var * v = nullptr;
+    for(auto itr = this->scopes->begin(), itr_end = this->scopes->end(); itr != itr_end; ++itr){
+        if(v != nullptr){
+            break;
+        }
 
+        v = (*itr)->checkVarName(ass->LHS);
+    }
+
+    if(v != nullptr){
+        string val = expression(ass->RHS, ass->LHS);
+        v = nullptr;
+        for(auto itr = this->scopes->begin(), itr_end = this->scopes->end(); itr != itr_end; ++itr){
+            if(v != nullptr){
+                (*(itr-1))->updateVar(ass->LHS, val);
+                break;
+            }
+
+            v = (*itr)->checkVarName(ass->LHS);
+        }
+    }else{
+        throw std::runtime_error("Variable name does not exist");
+    }
+    
 }
 
 void execution::block(ASTblock * blk){
-
+    this->scopes->push_back(new scope());
+    for(vector<ASTstatement *>::iterator itr = blk->stmt->begin(), itr_end = blk->stmt->end(); itr != itr_end; ++itr){
+        parseStatement(*itr);
+    }
+    this->scopes->pop_back();
 }
+
+scope * execution::funcBlock(ASTblock * blk, ASTformalParams * param){
+    this->scopes->push_back(new scope());
+    formalParams(param);
+
+    for( vector<ASTstatement *>::iterator itr = blk->stmt->begin(), itr_end = blk->stmt->end(); itr != itr_end; ++itr){
+        parseStatement(*itr);
+    }
+
+    auto temp = this->scopes->end()[-1];
+    this->scopes->pop_back();
+    return temp;
+}
+
+void execution::forBlock(ASTblock * blk, ASTvariableDecl * v){
+    this->scopes->push_back(new scope());
+    if(v != nullptr){
+        variableDecl(v);
+    }
+
+    for( vector<ASTstatement *>::iterator itr = blk->stmt->begin(), itr_end = blk->stmt->end(); itr != itr_end; ++itr){
+        parseStatement(*itr);
+    }
+    this->scopes->pop_back();
+}
+
 
 void execution::printStatement(ASTprintStatement * print){
 
 }
 
 void execution::functionDecl(ASTfunctionDecl * dec){
+    string f = "";
+    for(auto itr = this->functions->begin(), itr_end = this->functions->end(); itr != itr_end; ++itr){
+        if((*itr)->getName() == dec->ident->val){
+            f = dec->ident->val;
+        }
+    }
 
+    if(f != ""){
+        throw std::runtime_error("Function already exists");
+    }
+
+    auto block = funcBlock(dec->block, dec->param);
+    this->functions->push_back(new func(dec->ident->val, block, dec->type->val));
 }
 
 void execution::formalParams(ASTformalParams * fparams){
-
+    formalParam(fparams->p);
+    for(auto itr = fparams->formalParam->begin(), itr_end = fparams->formalParam->end(); itr != itr_end; ++itr){
+        formalParam(*itr);
+    }
 }
 
 void execution::formalParam(ASTformalParam * fparam){
-
+    this->scopes->back()->addVar(fparam->type->val, fparam->ident->val);
 }
 
 void execution::rtrnStatement(ASTrtrnStatement * rtrn){
@@ -126,27 +210,139 @@ void execution::rtrnStatement(ASTrtrnStatement * rtrn){
 }
 
 void execution::ifStatement(ASTifStatement * ifS){
-
+    block(ifS->blk);
 }
 
 void execution::forStatement(ASTforStatement * forS){
-
+    forBlock(forS->b, forS->vDecl);
 }
 
 void execution::whileStatement(ASTwhileStatement * whileS){
-
+    block(whileS->b);
 }
 
-void execution::expression(ASTexpression * exp){
+string execution::expression(ASTexpression * exp, string varT){
+    ASTidentifier* ident = dynamic_cast<ASTidentifier*>(exp->data);
+    if(ident != NULL){
+        var * v = nullptr;
+        for(auto itr = this->scopes->begin(), itr_end = this->scopes->end(); itr != itr_end; ++itr){
 
+            if(v != nullptr){
+                break;
+            }
+            v = (*itr)->checkVarName(ident->val);
+        }
+
+        if(v != nullptr){
+            return v->getValue();
+        }else{
+            throw std::runtime_error("Cannot find variable");
+        }
+    }
+
+    ASTfunctionCall* func = dynamic_cast<ASTfunctionCall*>(exp->data);
+    if(func != NULL){
+        functionCall(func);
+    }
+
+    ASTsubExpression* sub = dynamic_cast<ASTsubExpression*>(exp->data);
+    if(sub != NULL){
+        subExpression(sub);
+    }
+
+    ASTunary* u = dynamic_cast<ASTunary*>(exp->data);
+    if(u != NULL){
+        unary(u);
+    }
+
+    ASTliteral* lit = dynamic_cast<ASTliteral*>(exp->data);
+    if(lit != NULL){
+        return literal(lit);
+    }
+
+    ASTmultiplicativeOp* mul = dynamic_cast<ASTmultiplicativeOp*>(exp->data);
+    if(mul != NULL){
+        return multiplicative(mul, varT);
+    }
+
+    ASTadditiveOp* add = dynamic_cast<ASTadditiveOp*>(exp->data);
+    if(add != NULL){
+        return additive(add, varT);
+    }
+
+    ASTrelationalOp* rel = dynamic_cast<ASTrelationalOp*>(exp->data);
+    if(rel != NULL){
+        return relational(rel, varT);
+    }
+    return "fail";
 }
 
-void execution::expression2(ASTexpression * exp){
-    
+string execution::expression2(ASTexpression * exp, string varT){
+    ASTidentifier* ident = dynamic_cast<ASTidentifier*>(exp);
+    if(ident != NULL){
+        var * v = nullptr;
+        for(auto itr = this->scopes->begin(), itr_end = this->scopes->end(); itr != itr_end; ++itr){
+
+            if(v != nullptr){
+                break;
+            }
+            v = (*itr)->checkVarName(ident->val);
+        }
+
+        if(v != nullptr){
+            return v->getValue();
+        }else{
+            throw std::runtime_error("Cannot find variable");
+        }
+    }
+
+    ASTfunctionCall* func = dynamic_cast<ASTfunctionCall*>(exp);
+    if(func != NULL){
+        functionCall(func);
+    }
+
+    ASTsubExpression* sub = dynamic_cast<ASTsubExpression*>(exp);
+    if(sub != NULL){
+        subExpression(sub);
+    }
+
+    ASTunary* u = dynamic_cast<ASTunary*>(exp);
+    if(u != NULL){
+        unary(u);
+    }
+
+    ASTliteral* lit = dynamic_cast<ASTliteral*>(exp);
+    if(lit != NULL){
+        return literal(lit);
+    }
+
+    ASTmultiplicativeOp* mul = dynamic_cast<ASTmultiplicativeOp*>(exp);
+    if(mul != NULL){
+        return multiplicative(mul, varT);
+    }
+
+    ASTadditiveOp* add = dynamic_cast<ASTadditiveOp*>(exp);
+    if(add != NULL){
+        return additive(add, varT);
+    }
+
+    ASTrelationalOp* rel = dynamic_cast<ASTrelationalOp*>(exp);
+    if(rel != NULL){
+        return relational(rel, varT);
+    }
+    return "fail";
 }
 
-void execution::additive(ASTadditiveOp * add){
-if(test == "fail"){
+string execution::additive(ASTadditiveOp * add, string varT){
+    string LHS = expression2(add->LHS, varT);
+    string RHS = expression2(add->RHS, varT);
+
+    if(LHS == "" && RHS == ""){
+        return "";
+    }
+
+    string test = testType(LHS, RHS, varT);
+    if(test == "fail"){
         throw std::runtime_error("Incorrect Type");
 
     }else if(test == "int"){
@@ -189,18 +385,77 @@ if(test == "fail"){
             throw std::runtime_error("Can not use '-' operator with boolean values");
         }
     }
+    
+    return "fail";
 }
 
-void execution::multiplicative(ASTmultiplicativeOp * mul){
+string execution::testType(string LHS, string RHS, string varT){
+    if(varT == "int"){
+        for (char const &c : LHS) {
+            if (std::isdigit(c) == 0) return "fail";
+        }
+        for (char const &c : RHS) {
+            if (std::isdigit(c) == 0) return "fail";
+        }
+        return "int";
 
+    }else if(varT == "float"){
+        if(!isFloat(LHS)) return "fail";
+        if(!isFloat(RHS)) return "fail";
+
+        return "float";
+
+    }else if(varT == "char"){
+        if(LHS.length() != 1) return "fail";
+        if(RHS.length() != 1) return "fail";
+
+        return "char";
+
+    }else if(varT == "bool"){
+        if(LHS != "true" || LHS != "false") return "fail";
+        if(RHS != "true" || RHS != "false") return "fail";
+
+        return "bool";
+    }
+    
+    return "fail";
 }
 
-void execution::relational(ASTrelationalOp * rel){
+string execution::multiplicative(ASTmultiplicativeOp * mul, string varT){
+    string LHS = expression2(mul->LHS, varT);
+    string RHS = expression2(mul->RHS, varT);
 
+    return LHS;
 }
 
-void execution::literal(ASTliteral * lit){
+string execution::relational(ASTrelationalOp * rel, string varT){
+    string LHS = expression2(rel->LHS, varT);
+    string RHS = expression2(rel->RHS, varT);
 
+    return LHS;
+}
+
+string execution::literal(ASTliteral * lit){
+    ASTbooleanLiteral* b = dynamic_cast<ASTbooleanLiteral*>(lit);
+    if(b != NULL){
+        return b->val;
+    }
+
+    ASTintLiteral* i = dynamic_cast<ASTintLiteral*>(lit);
+    if(i != NULL){
+        return i->val;
+    }
+
+    ASTfloatLiteral* f = dynamic_cast<ASTfloatLiteral*>(lit);
+    if(f != NULL){
+        return f->val;
+    }
+
+    ASTcharLiteral* c = dynamic_cast<ASTcharLiteral*>(lit);
+    if(c != NULL){
+        return c->val;
+    }
+    return "fail";
 }
 
 void execution::functionCall(ASTfunctionCall * func){
@@ -218,3 +473,7 @@ void execution::unary(ASTunary * u){
 void execution::actualParams(ASTactualParams * a){
 
 }
+
+
+
+

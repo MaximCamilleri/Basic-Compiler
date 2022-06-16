@@ -217,6 +217,7 @@ ASTfunctionDecl::ASTfunctionDecl(ASTidentifier * ident, ASTtype * type, ASTblock
     this->ident = ident;
     this->type = type;
     this->block = block;
+    this->param = nullptr;
 }
 
 ASTfunctionDecl::~ASTfunctionDecl(){
@@ -294,6 +295,7 @@ ASTifStatement::ASTifStatement(ASTexpression * exp, ASTblock * blk, ASTblock * _
 ASTifStatement::ASTifStatement(ASTexpression * exp, ASTblock * blk){
     this->blk = blk;
     this->exp = exp;
+    this->_else = nullptr;
 }
 
 ASTifStatement::~ASTifStatement(){

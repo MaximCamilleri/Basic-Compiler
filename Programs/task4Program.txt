@@ -1,0 +1,17 @@
+fn MoreThan50(x: int) -> bool {
+    let y:bool = true;
+    if (x <= 50) {return false;}
+    return y;
+}
+
+let x: int = 45;
+while(x < 50){
+    print MoreThan50(x); //"false" x6 since bool operator is <
+    x = x + 1;
+}
+
+x = 45;
+while(MoreThan50(x)){
+    print MoreThan50(x); //"false" x5 since bool operator is <=
+    x = x + 1;
+}

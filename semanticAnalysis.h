@@ -66,6 +66,7 @@ public:
     func(string name, scope * s, string returnType);
 
     string getName();
+    string getReturn();
 };
 
 func::func(string name, scope * s, string returnType){
@@ -76,6 +77,10 @@ func::func(string name, scope * s, string returnType){
 
 string func::getName(){
     return this->name;
+}
+
+string func::getReturn(){
+    return this->returnType;
 }
 
 

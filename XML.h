@@ -115,7 +115,7 @@ void xml::variableDecl(ASTvariableDecl * varDecl){
 
 void xml::assignment(ASTassignment * ass){
     tab();
-    cout << "Assignment" << endl;
+    cout << "<Assignment>" << endl;
     this->tabCounter += 1;
     tab();
     cout << "<Var>" + ass->LHS + "</Var>" << endl;
@@ -155,7 +155,9 @@ void xml::functionDecl(ASTfunctionDecl * dec){
     this->tabCounter += 1;
     tab();
     cout << "<Identifier>" + dec->ident->val + "<\\Identifier>" << endl;
-    formalParams(dec->param);
+    if(dec->param != nullptr){
+        formalParams(dec->param);
+    }
     tab();
     cout << "<Type>" + dec->type->val + "<\\Type>" << endl;
     block(dec->block);
@@ -237,7 +239,7 @@ void xml::forStatement(ASTforStatement * forS){
 
 void xml::whileStatement(ASTwhileStatement * whileS){
     tab();
-    cout << "while" << endl;
+    cout << "<while>" << endl;
     this->tabCounter += 1;
     expression(whileS->exp);
     block(whileS->b);

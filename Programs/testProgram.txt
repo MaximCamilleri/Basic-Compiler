@@ -1,4 +1,1 @@
-fn AverageOfThree(x:float, y:float, z:float) -> float {
-    let total:float = x + y + z;
-    return total / 3;
-}
+x = 10 + x * 5;

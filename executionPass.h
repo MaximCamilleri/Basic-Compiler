@@ -2,10 +2,9 @@
 
 class execution{
 private:
-    scope * globalScope;
-    int hasReturn;
+    bool inFunctionDecl = false;
+    string returnVal;
     string varType;
-    int inIfStatement = 0;
     vector<scope *> * scopes;
     vector<ASTstatement *> * statements;
     vector<func *> * functions;
@@ -22,11 +21,11 @@ public:
     void ifStatement(ASTifStatement * ifS, ASTtype * t);
     void forStatement(ASTforStatement * forS);
     void whileStatement(ASTwhileStatement * whileS);
-    void rtrnStatement(ASTrtrnStatement * rtrn, ASTtype * t);
+    string rtrnStatement(ASTrtrnStatement * rtrn, ASTtype * t);
     void printStatement(ASTprintStatement * print);
     void functionDecl(ASTfunctionDecl * dec);
     void block(ASTblock * blk, ASTtype * t);
-    void forBlock(ASTblock * blk, ASTvariableDecl * v);
+    void loopBlock(ASTblock * blk);
     scope * funcBlock(ASTblock * blk, ASTformalParams * param, ASTtype * t);
 
     string expression(ASTexpression * exp);
@@ -37,19 +36,19 @@ public:
     string multiplicative(ASTmultiplicativeOp * mul);
     string relational(ASTrelationalOp * rel);
     string literal(ASTliteral * lit);
-    void functionCall(ASTfunctionCall * func);
+    string functionCall(ASTfunctionCall * func);
     string subExpression(ASTsubExpression * sub);
     string unary(ASTunary * u);
-    string actualParams(ASTactualParams * a);
+    vector<string> actualParams(ASTactualParams * a);
+    void functionCallBlock(func *f);
 
     string testType(string LHS, string RHS, string varT);
 };
 
 execution::execution(vector<ASTstatement *> * statements){
     this->statements = statements;
-    this->globalScope = new scope();
     this->scopes = new vector<scope *>();
-    this->scopes->push_back(globalScope);
+    this->scopes->push_back(new scope());
     this->functions = new vector<func *>();
     this->varType = "";
 }
@@ -106,7 +105,7 @@ void execution::parseStatement(ASTstatement * stmt, ASTtype * t){
 
     ASTrtrnStatement* p9 = dynamic_cast<ASTrtrnStatement*>(stmt);
     if(p9 != NULL){
-        rtrnStatement(p9, t);
+        this->returnVal = rtrnStatement(p9, t);
     }
 }
 
@@ -132,7 +131,7 @@ void execution::variableDecl(ASTvariableDecl * varDecl){
 
 void execution::assignment(ASTassignment * ass){
     var * v = nullptr;
-    for(auto itr = this->scopes->begin(), itr_end = this->scopes->end(); itr != itr_end; ++itr){
+    for(vector<scope *>::reverse_iterator itr = this->scopes->rbegin(), itr_end = this->scopes->rend(); itr != itr_end; ++itr){
         if(v != nullptr){
             break;
         }
@@ -144,7 +143,7 @@ void execution::assignment(ASTassignment * ass){
         this->varType = v->getVarType();
         string val = expression(ass->RHS);
         v = nullptr;
-        for(auto itr = this->scopes->begin(), itr_end = this->scopes->end(); itr != itr_end; ++itr){
+        for(vector<scope *>::reverse_iterator itr = this->scopes->rbegin(), itr_end = this->scopes->rend(); itr != itr_end; ++itr){
             v = (*itr)->checkVarName(ass->LHS);
 
             if(v != nullptr){
@@ -171,54 +170,31 @@ scope * execution::funcBlock(ASTblock * blk, ASTformalParams * param, ASTtype * 
     if(param != nullptr){
         formalParams(param);
     }
-    
-    for( vector<ASTstatement *>::iterator itr = blk->stmt->begin(), itr_end = blk->stmt->end(); itr != itr_end; ++itr){
-        parseStatement(*itr, t);
-    }
-
-    if(this->hasReturn < this->inIfStatement + 1){
-        throw std::runtime_error("Function has no return");
-    }
-    this->hasReturn = 0;
 
     auto temp = this->scopes->end()[-1];
     this->scopes->pop_back();
     return temp;
 }
 
-void execution::forBlock(ASTblock * blk, ASTvariableDecl * v){
-    this->scopes->push_back(new scope());
-    if(v != nullptr){
-        variableDecl(v);
-    }
-
+void execution::loopBlock(ASTblock * blk){
     for( vector<ASTstatement *>::iterator itr = blk->stmt->begin(), itr_end = blk->stmt->end(); itr != itr_end; ++itr){
         parseStatement(*itr, nullptr);
     }
-    this->scopes->pop_back();
 }
 
 
 void execution::printStatement(ASTprintStatement * print){
     this->varType = "";
     cout << expression(print->RHS) << endl;
+    this->varType = "";
 }
 
 void execution::functionDecl(ASTfunctionDecl * dec){
-    this->hasReturn = 0;
-    string f = "";
-    for(auto itr = this->functions->begin(), itr_end = this->functions->end(); itr != itr_end; ++itr){
-        if((*itr)->getName() == dec->ident->val){
-            f = dec->ident->val;
-        }
-    }
-
-    if(f != ""){
-        throw std::runtime_error("Function already exists");
-    }
+    this->inFunctionDecl = true;
 
     auto block = funcBlock(dec->block, dec->param, dec->type);
-    this->functions->push_back(new func(dec->ident->val, block, dec->type->val));
+    this->functions->push_back(new func(dec->ident->val, block, dec->type->val, dec->block));
+    this->inFunctionDecl = false;
 }
 
 void execution::formalParams(ASTformalParams * fparams){
@@ -232,31 +208,36 @@ void execution::formalParam(ASTformalParam * fparam){
     this->scopes->back()->addVar(fparam->type->val, fparam->ident->val);
 }
 
-void execution::rtrnStatement(ASTrtrnStatement * rtrn, ASTtype * t){
-    if(this->inIfStatement < 0){
-        this->hasReturn += std::numeric_limits<int>::max();;
-    }else{
-        this->hasReturn += 1;
-    }
-    this->varType = t->val;
-    expression(rtrn->exp);
+string execution::rtrnStatement(ASTrtrnStatement * rtrn, ASTtype * t){
+    return expression(rtrn->exp);
 }
 
 void execution::ifStatement(ASTifStatement * ifS, ASTtype * t){
-    this->inIfStatement += 1;
-    block(ifS->blk, t);
-    if(ifS->_else != nullptr){
-        block(ifS->_else, t);
+    if(expression(ifS->exp) == "true"){
+        block(ifS->blk, t);
+    }else{
+        if(ifS->_else != nullptr){
+            block(ifS->_else, t);
+        }
     }
-    this->inIfStatement -= 1;
 }
 
 void execution::forStatement(ASTforStatement * forS){
-    forBlock(forS->b, forS->vDecl);
+    this->scopes->push_back(new scope());
+    if(forS->vDecl != nullptr){
+        variableDecl(forS->vDecl);
+    }
+    while(expression(forS->exp) == "true"){
+        loopBlock(forS->b);
+        assignment(forS->ass);
+    }
+    this->scopes->pop_back();
 }
 
 void execution::whileStatement(ASTwhileStatement * whileS){
-    block(whileS->b, nullptr);
+    while(expression(whileS->exp) == "true"){
+        loopBlock(whileS->b);
+    }
 }
 
 string execution::expression(ASTexpression * exp){
@@ -291,17 +272,17 @@ string execution::expression(ASTexpression * exp){
 
     ASTfunctionCall* func = dynamic_cast<ASTfunctionCall*>(exp->data);
     if(func != NULL){
-        functionCall(func);
+        return functionCall(func);
     }
 
     ASTsubExpression* sub = dynamic_cast<ASTsubExpression*>(exp->data);
     if(sub != NULL){
-        subExpression(sub);
+        return subExpression(sub);
     }
 
     ASTunary* u = dynamic_cast<ASTunary*>(exp->data);
     if(u != NULL){
-        unary(u);
+        return unary(u);
     }
 
     ASTliteral* lit = dynamic_cast<ASTliteral*>(exp->data);
@@ -330,7 +311,7 @@ string execution::expression2(ASTexpression * exp){
     ASTidentifier* ident = dynamic_cast<ASTidentifier*>(exp);
     if(ident != NULL){
         var * v = nullptr;
-        for(auto itr = this->scopes->begin(), itr_end = this->scopes->end(); itr != itr_end; ++itr){
+        for(vector<scope *>::reverse_iterator itr = this->scopes->rbegin(), itr_end = this->scopes->rend(); itr != itr_end; ++itr){
 
             if(v != nullptr){
                 break;
@@ -388,12 +369,15 @@ string execution::expression2(ASTexpression * exp){
 }
 
 string execution::additive(ASTadditiveOp * add){
-    auto LHS = expression2(add->LHS);
-    auto RHS = expression2(add->RHS);
+    string LHS = expression2(add->LHS);
+    string RHS = expression2(add->RHS);
 
-    if(LHS == "" || RHS == ""){
+    if((LHS == "" || RHS == "") && !this->inFunctionDecl){
         throw std::runtime_error("Variable has no value");
+    }else if((LHS == "" || RHS == "") && this->inFunctionDecl){
+        return "";
     }
+
 
     string test = testType(LHS, RHS, this->varType);
     if(test == "fail"){
@@ -445,11 +429,23 @@ string execution::additive(ASTadditiveOp * add){
 
 string execution::testType(string LHS, string RHS, string varT){
     if(varT == "int"){
+        int counter = 0;
         for (char const &c : LHS) {
+            if(c == 45 && counter == 0){
+                counter++;
+                continue;
+            } 
             if (std::isdigit(c) == 0) return "fail";
+            counter++;
         }
+        counter = 0;
         for (char const &c : RHS) {
+            if(c == 45 && counter == 0){
+                counter++;
+                continue;
+            } 
             if (std::isdigit(c) == 0) return "fail";
+            counter++;
         }
         return "int";
 
@@ -479,7 +475,9 @@ string execution::multiplicative(ASTmultiplicativeOp * mul){
     string LHS = expression2(mul->LHS);
     string RHS = expression2(mul->RHS);
 
-    if(LHS == "" && RHS == ""){
+    if((LHS == "" || RHS == "") && !this->inFunctionDecl){
+        throw std::runtime_error("Variable has no value");
+    }else if((LHS == "" || RHS == "") && this->inFunctionDecl){
         return "";
     }
 
@@ -533,47 +531,76 @@ string execution::multiplicative(ASTmultiplicativeOp * mul){
     return "fail";
 }
 
+template < typename i, typename f, typename b, typename c> 
+typename std::common_type<i, f, b, c>::type relationalTypeCheck(string s, string varType){
+    //convert type
+    if(varType == "bool"){
+        if(s == "true"){
+            return true;
+        }else{
+            return false;
+        }   
+        
+    }else if(varType == "char"){
+        return s[0];
+
+    }else if(varType == "int"){
+        return stoi(s);
+        
+    }else if(varType == "float"){
+        return stof(s);
+    }
+    throw std::runtime_error("cannot proceed deu to unknown type");
+    return 0;
+}
+
 string execution::relational(ASTrelationalOp * rel){
     string LHS = expression2(rel->LHS);
     string RHS = expression2(rel->RHS);
 
+    // auto LHSc;
+    // auto RHSc;
+
+    auto LHSc = relationalTypeCheck<int, float, bool, char>(LHS, this->varType);
+    auto RHSc = relationalTypeCheck<int, float, bool, char>(RHS, this->varType);
+
     if(rel->val == "<="){
-        if(LHS <= RHS){
+        if(LHSc <= RHSc){
             return "true";
         }else{
             return "false";
         }
 
     }else if(rel->val == ">="){
-        if(LHS >= RHS){
+        if(LHSc >= RHSc){
             return "true";
         }else{
             return "false";
         }
 
     }else if(rel->val == "=="){
-        if(LHS == RHS){
+        if(LHSc == RHSc){
             return "true";
         }else{
             return "false";
         }
         
     }else if(rel->val == "!="){
-        if(LHS != RHS){
+        if(LHSc != RHSc){
             return "true";
         }else{
             return "false";
         }
         
     }else if(rel->val == "<"){
-        if(LHS < RHS){
+        if(LHSc < RHSc){
             return "true";
         }else{
             return "false";
         }
         
     }else if(rel->val == ">"){
-        if(LHS > RHS){
+        if(LHSc > RHSc){
             return "true";
         }else{
             return "false";
@@ -587,51 +614,27 @@ string execution::literal(ASTliteral * lit){
     ASTbooleanLiteral* b = dynamic_cast<ASTbooleanLiteral*>(lit);
     
     if(b != NULL){
-        if(this->varType == ""){
-            this->varType ="bool";
-        }
-        if(this->varType != "bool"){
-            throw std::runtime_error("incorrect type");
-        }
         return b->val;
     }
 
     ASTintLiteral* i = dynamic_cast<ASTintLiteral*>(lit);
     if(i != NULL){
-        if(this->varType == ""){
-            this->varType ="int";
-        }
-        if(this->varType != "int"){
-            throw std::runtime_error("incorrect type");
-        }
         return i->val;
     }
 
     ASTfloatLiteral* f = dynamic_cast<ASTfloatLiteral*>(lit);
     if(f != NULL){
-        if(this->varType == ""){
-            this->varType ="float";
-        }
-        if(this->varType != "float"){
-            throw std::runtime_error("incorrect type");
-        }
         return f->val;
     }
 
     ASTcharLiteral* c = dynamic_cast<ASTcharLiteral*>(lit);
     if(c != NULL){
-        if(this->varType == ""){
-            this->varType ="char";
-        }
-        if(this->varType != "char"){
-            throw std::runtime_error("incorrect type");
-        }
         return c->val;
     }
     return "fail";
 }
 
-void execution::functionCall(ASTfunctionCall * funcCall){
+string execution::functionCall(ASTfunctionCall * funcCall){
     func *f = nullptr;
     
     for(auto itr = this->functions->begin(), itr_end = this->functions->end(); itr != itr_end; ++itr){
@@ -639,15 +642,26 @@ void execution::functionCall(ASTfunctionCall * funcCall){
             f = *itr;
         }
     }
-    
-    if(f == nullptr){
-        throw std::runtime_error("Function does not exist");
+
+    vector<string> aParam = actualParams(funcCall->a);;
+    for(int i = 0; i < f->getScope()->numberOfvars(); i++){
+        f->getScope()->updateVar(f->getScope()->getNameAtIndex(i), aParam[i]);
     }
-    if(this->varType != ""){
-        if(this->varType != f->getReturn()){
-            throw std::runtime_error("Function return type does not match variable assignment");
+    functionCallBlock(f);
+    return this->returnVal;
+}
+
+void execution::functionCallBlock(func *f){
+    this->scopes->push_back(f->getScope());
+    for(auto itr = f->getBlock()->stmt->begin(), itr_end = f->getBlock()->stmt->end(); itr != itr_end; ++itr){
+        this->returnVal = "";
+        this->varType = "";
+        parseStatement(*itr, nullptr);
+        if(this->returnVal != ""){
+            break;
         }
     }
+    this->scopes->pop_back();
 }
 
 string execution::subExpression(ASTsubExpression * sub){
@@ -655,11 +669,30 @@ string execution::subExpression(ASTsubExpression * sub){
 }
 
 string execution::unary(ASTunary * u){
-    return expression(u->data);
+    string val = expression(u->RHS);
+    if(u->LHS == "-"){
+        return u->LHS + val;
+    }else if(u->LHS == "not" && this->varType == "bool"){
+        if(val == "true"){
+            return "false";
+        }else{
+            return "true";
+        }
+        
+    }else{
+        throw std::runtime_error("Unary can not be performed on given type");
+        return "fail";
+    }
 }
 
-string execution::actualParams(ASTactualParams * a){
-    return expression(a->data);
+vector<string> execution::actualParams(ASTactualParams * a){
+    vector<string> s;
+    s.push_back(expression(a->exp));
+    for(auto itr = a->exps->begin(), itr_end = a->exps->end(); itr != itr_end; ++itr){
+        this->varType = "";
+        s.push_back(expression(*itr));
+    }
+    return s;
 }
 
 

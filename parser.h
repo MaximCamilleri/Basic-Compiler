@@ -528,8 +528,11 @@ ASTexpression * parser::parseTerm(){
     if(!LHS){
         return nullptr;
     }
-
-    getNextToken();
+    ASTunary * check = dynamic_cast<ASTunary *>(LHS);
+    if(check == NULL){
+        getNextToken();
+    }
+    
     while(this->nextToken->getTokenType() == _divide ||
           this->nextToken->getTokenType() == _multiply ||
           this->nextToken->getTokenType() == _and){
@@ -544,6 +547,7 @@ ASTexpression * parser::parseTerm(){
 ASTmultiplicativeOp * parser::parseMultiplicativeOp(ASTexpression * LHS){
     ASTmultiplicativeOp * node = nullptr;
     auto token = this->nextToken->getLexeme();
+
     getNextToken();
     auto temp = parseFactor();
     if(temp != nullptr){

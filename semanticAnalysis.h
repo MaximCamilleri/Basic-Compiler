@@ -61,12 +61,16 @@ private:
     string name;
     scope * s;
     string returnType;
+    ASTblock * b;
 
 public:
     func(string name, scope * s, string returnType);
+    func(string name, scope * s, string returnType, ASTblock * b);
 
     string getName();
     string getReturn();
+    scope * getScope();
+    ASTblock * getBlock();
 };
 
 func::func(string name, scope * s, string returnType){
@@ -75,12 +79,27 @@ func::func(string name, scope * s, string returnType){
     this->returnType = returnType;
 }
 
+func::func(string name, scope * s, string returnType, ASTblock * b){
+    this->name = name;
+    this->s = s;
+    this->returnType = returnType;
+    this->b = b;
+}
+
 string func::getName(){
     return this->name;
 }
 
 string func::getReturn(){
     return this->returnType;
+}
+
+scope * func::getScope(){
+    return this->s;
+}
+
+ASTblock * func::getBlock(){
+    return this->b;
 }
 
 
@@ -101,6 +120,9 @@ public:
 
     var * checkVarName(string name);
     void updateVar(string varName, string val);
+
+    int numberOfvars();
+    string getNameAtIndex(int index);
 
 };
 
@@ -146,4 +168,22 @@ var * scope::checkVarName(string name){
     }
     return nullptr;
     
+}
+
+int scope::numberOfvars(){
+    int counter = 0;
+    for(vector<var *>::iterator itr = this->vars->begin(), itr_end = this->vars->end(); itr != itr_end; ++itr){
+        counter++;
+    }
+    return counter;
+}
+
+string scope::getNameAtIndex(int index){
+    int counter = 0;
+    string ret = "";
+    for(vector<var *>::iterator itr = this->vars->begin(), itr_end = this->vars->end(); counter <= index; ++itr){
+        counter++;
+        ret = (*itr)->getName();
+    }
+    return ret;
 }

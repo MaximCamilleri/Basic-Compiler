@@ -1,3 +1,11 @@
-let x:int = 10 + 10;
-x = x + 1;
-print x * 2;
+fn add(i:int, j:int) -> int{
+    i = i + j;
+    print i;
+    return i + j;
+}
+
+let x:int = 5;
+
+x = add(x, x);
+
+print x;

@@ -1,5 +1,7 @@
 #include "lib_std_facilities.h"
 
+using namespace std;
+
 class program{
 private:
     vector<char> prog;
@@ -26,7 +28,7 @@ void program::readProgram(string fileName){
 
     FILE* input_file = fopen(filename.c_str(), "r");
     if (input_file == nullptr) {
-       cout << "File not found";
+       std::cout << "File not found";
     }
 
     char c;

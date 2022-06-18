@@ -1,11 +1,14 @@
-fn add(i:int, j:int) -> int{
-    i = i + j;
-    print i;
-    return i + j;
+let x:int = 10;
+let y:int = 20;
+
+while(x < 20){
+    x = x + 1;
+    while(y < 30){
+        y = y + 1;
+        print x + y;
+    }
 }
 
-let x:int = 5;
-
-x = add(x, x);
-
 print x;
+print y;
+

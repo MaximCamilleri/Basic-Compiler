@@ -3,11 +3,13 @@ fn MoreThan50(x: int) -> bool {
     return true;
 }
 
+
 let x: int = 45;
 while(x < 50){
     print MoreThan50(x); //"false" x6 since bool operator is <
     x = x + 1;
 }
+
 
 x = 45;
 while(MoreThan50(x)){

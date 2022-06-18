@@ -15,7 +15,7 @@ fn Pow(x:float, n:int) -> float{
     return y;
 }
 
-let x:float = Pow(2.1, 10);
+let x:float = Pow((2.0 + 5.6), -2);
 
-print x;        //prints to console 1667.988
+print x;        //prints to console 0.01731301
 

@@ -2,7 +2,7 @@
 
 This project implements a basic complier for the Tinylang language. Tinylang is a basic programming language which supports variables, functions, for and while loops, if statements, and print commands. 
 
-The project is split into 5 main parts. These are lexical analysis, parsing and building of an AST tree, XML representation of the AST tree, Semantic analysis, and execution. The language provides comprehensive error messages for an error encountered in each section. 
+The project is split into 5 main parts. These are lexical analysis, parsing and building of an AST tree, XML representation of the AST tree, Semantic analysis, and execution. The language provides comprehensive error messages for inconsistences encountered in each section. 
 
 ### Sample Tinylang Program:
 ```
